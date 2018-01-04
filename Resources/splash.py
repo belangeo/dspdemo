@@ -20,7 +20,8 @@ def GetRoundShape(w, h, r):
     return wx.Region(GetRoundBitmap(w, h, r))
 
 class DSPDemoSplashScreen(wx.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, callback):
+        self.callback = callback
         display = wx.Display(0)
         size = display.GetGeometry()[2:]
         wx.Frame.__init__(self, parent, -1, "", pos=(-1, size[1] // 6),
@@ -40,7 +41,7 @@ class DSPDemoSplashScreen(wx.Frame):
         dc = wx.ClientDC(self)
         dc.DrawBitmap(self.bmp, 0, 0, True)
 
-        wx.CallLater(3000, self.OnClose)
+        wx.CallLater(2500, self.OnClose)
 
         self.Center(wx.HORIZONTAL)
         if sys.platform == 'win32':
@@ -69,4 +70,5 @@ class DSPDemoSplashScreen(wx.Frame):
         dc.DrawLabel(APP_COPYRIGHT, wx.Rect(80, 415, 200, 15))
 
     def OnClose(self):
+        self.callback()
         self.Destroy()

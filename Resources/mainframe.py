@@ -5,7 +5,7 @@ from .utils import audio_config, dump_func
 from .widgets import HeadTitle, Knob
 
 class MainFrame(wx.Frame):
-    def __init__(self, parent, title, pos=(50, 50), size=(1200, 800)):
+    def __init__(self, parent, title, pos=(50, 50), size=(1000, 700)):
         wx.Frame.__init__(self, parent, -1, title, pos, size)
 
         self.menubar = wx.MenuBar()
@@ -76,6 +76,8 @@ class MainFrame(wx.Frame):
         mainsizer.Add(rightbox, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 2)
         self.panel.SetSizerAndFit(mainsizer)
 
+        self.Show()
+
     def loadModule(self, evt):
         index = evt.GetId() - MODULE_FIRST_ID
         oldmodule = self.module
@@ -84,8 +86,6 @@ class MainFrame(wx.Frame):
         self.module.processing()
         self.leftboxmid.Replace(oldmodule, self.module)
         oldmodule.Destroy()
-        #self.leftboxmid.Detach(oldmodule)
-        #self.leftboxmid.Add(self.module, 1, wx.EXPAND|wx.ALL, 5)
         self.leftboxmid.Layout()
         wx.GetTopLevelParent(self).SetTitle(MODULES[index][0])
         self.outsig.value = self.module.output
