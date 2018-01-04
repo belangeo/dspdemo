@@ -23,7 +23,7 @@ def audio_config():
 
     if host is None:
         if sys.platform.startswith("win"):
-            host = "wasapi"
+            host = "directsound"
         elif sys.platform.startswith("linux"):
             host = "alsa"
         else:
