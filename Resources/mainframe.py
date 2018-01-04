@@ -78,11 +78,14 @@ class MainFrame(wx.Frame):
 
     def loadModule(self, evt):
         index = evt.GetId() - MODULE_FIRST_ID
-        self.leftboxmid.Detach(self.module)
+        oldmodule = self.module
         self.module = MODULES[index][1](self.panel)
         self.module.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.module.processing()
-        self.leftboxmid.Add(self.module, 1, wx.EXPAND|wx.ALL, 5)
+        self.leftboxmid.Replace(oldmodule, self.module)
+        oldmodule.Destroy()
+        #self.leftboxmid.Detach(oldmodule)
+        #self.leftboxmid.Add(self.module, 1, wx.EXPAND|wx.ALL, 5)
         self.leftboxmid.Layout()
         wx.GetTopLevelParent(self).SetTitle(MODULES[index][0])
         self.outsig.value = self.module.output
