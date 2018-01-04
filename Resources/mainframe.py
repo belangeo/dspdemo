@@ -227,7 +227,10 @@ class MainFrame(wx.Frame):
             self.server.stop()
 
     def handleRec(self, evt):
-        pass
+        if evt.GetInt():
+            self.server.recstart()
+        else:
+            self.server.recstop()
 
     ### Spectrum methods ###
     def specFreezeIt(self, evt):

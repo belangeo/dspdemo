@@ -1,4 +1,5 @@
-import wx, sys, os
+import sys
+import wx
 from .constants import *
 from .images import DSPDemo_Icon
 
@@ -21,11 +22,12 @@ def GetRoundShape(w, h, r):
 
 class DSPDemoSplashScreen(wx.Frame):
     def __init__(self, parent, callback):
-        self.callback = callback
         display = wx.Display(0)
         size = display.GetGeometry()[2:]
-        wx.Frame.__init__(self, parent, -1, "", pos=(-1, size[1] // 6),
-                         style=wx.FRAME_SHAPED | wx.BORDER_SIMPLE | wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP)
+        st = wx.FRAME_SHAPED|wx.BORDER_SIMPLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP
+        wx.Frame.__init__(self, parent, -1, "", pos=(-1, size[1] // 6), style=st)
+
+        self.callback = callback
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
@@ -61,13 +63,8 @@ class DSPDemoSplashScreen(wx.Frame):
         dc.DrawRectangle(0, 0, w, h)
         dc.DrawBitmap(self.bmp, 0, 0, True)
         dc.SetTextForeground("#333333")
-        font, psize = dc.GetFont(), dc.GetFont().GetPointSize()
-        if sys.platform != "win32":
-            font.SetFaceName("Monaco")
-            font.SetPointSize(psize)
-        dc.SetFont(font)
-        dc.DrawLabel("%s %s" % (APP_NAME, APP_VERSION), wx.Rect(80, 400, 200, 15))
-        dc.DrawLabel(APP_COPYRIGHT, wx.Rect(80, 415, 200, 15))
+        dc.DrawLabel("%s v%s" % (APP_NAME, APP_VERSION), wx.Rect(70, 380, 200, 15))
+        dc.DrawLabel(APP_COPYRIGHT, wx.Rect(70, 400, 200, 15))
 
     def OnClose(self):
         self.callback()

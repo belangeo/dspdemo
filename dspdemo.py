@@ -1,5 +1,4 @@
 import wx
-from Resources.constants import *
 from Resources.mainframe import MainFrame
 from Resources.splash import DSPDemoSplashScreen
 
