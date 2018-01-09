@@ -2,7 +2,7 @@ import wx
 from pyo import *
 from .modules import *
 from .utils import audio_config, dump_func
-from .widgets import HeadTitle, Knob
+from .widgets import DocFrame, HeadTitle, Knob
 
 class MainFrame(wx.Frame):
     def __init__(self, parent, title, pos=(50, 50), size=(1000, 700)):
@@ -12,13 +12,17 @@ class MainFrame(wx.Frame):
         fileMenu = wx.Menu()
         moduleMenu = wx.Menu()
         for i, mod in enumerate(MODULES):
-            moduleMenu.Append(MODULE_FIRST_ID+i, mod[0])
+            moduleMenu.Append(MODULE_FIRST_ID+i, mod.name)
             moduleMenu.Bind(wx.EVT_MENU, self.loadModule, id=MODULE_FIRST_ID+i)
         fileMenu.AppendSubMenu(moduleMenu, "Modules")
         fileMenu.AppendSeparator()
         fileMenu.Append(wx.ID_EXIT, "Quit\tCtrl+Q")
         fileMenu.Bind(wx.EVT_MENU, self.on_quit, id=wx.ID_EXIT)
+        helpMenu = wx.Menu()
+        helpMenu.Append(MODULE_DOC_ID, "Documentation du module\tCtrl+I")
+        helpMenu.Bind(wx.EVT_MENU, self.on_module_doc, id=MODULE_DOC_ID)
         self.menubar.Append(fileMenu, "File")
+        self.menubar.Append(helpMenu, "Help")
         self.SetMenuBar(self.menubar)
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
@@ -32,17 +36,18 @@ class MainFrame(wx.Frame):
         self.panel = wx.Panel(self)
         self.panel.SetBackgroundColour(APP_BACKGROUND_COLOUR)
 
-        self.module = OscilModule(self.panel)
+        self.module = TestModule(self.panel)
         self.module.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.module.processing()
 
         # Audio vizualizers.
         self.outgain = SigTo(0.7)
-        self.outsig = Sig(self.module.output, mul=self.outgain).out()
+        self.outsig = Sig(self.module.output, mul=self.outgain)
         self.outspec = Spectrum(self.outsig, function=dump_func)
         self.outspec.function = None
         self.outscope = Scope(self.outsig, function=dump_func)
         self.outscope.function = None
+        self.mixoutsig = self.outsig.mix(2).out()
 
         mainsizer = wx.BoxSizer(wx.HORIZONTAL)
         leftbox = wx.BoxSizer(wx.VERTICAL)
@@ -81,13 +86,13 @@ class MainFrame(wx.Frame):
     def loadModule(self, evt):
         index = evt.GetId() - MODULE_FIRST_ID
         oldmodule = self.module
-        self.module = MODULES[index][1](self.panel)
+        self.module = MODULES[index](self.panel)
         self.module.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.module.processing()
         self.leftboxmid.Replace(oldmodule, self.module)
         oldmodule.Destroy()
         self.leftboxmid.Layout()
-        wx.GetTopLevelParent(self).SetTitle(MODULES[index][0])
+        wx.GetTopLevelParent(self).SetTitle(MODULES[index].name)
         self.outsig.value = self.module.output
         
     def on_quit(self, evt):
@@ -95,6 +100,9 @@ class MainFrame(wx.Frame):
             self.server.stop()
             time.sleep(0.25)
         self.Destroy()
+
+    def on_module_doc(self, evt):
+        doc_frame = DocFrame(self, self.module.__doc__)
 
     def createControlBox(self):
         sizer = wx.BoxSizer(wx.VERTICAL)

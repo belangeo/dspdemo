@@ -2,6 +2,13 @@ import math
 import wx
 from .constants import *
 
+class DocFrame(wx.Frame):
+    def __init__(self, parent, text, pos=(50, 50), size=(600, 600)):
+        wx.Frame.__init__(self, parent, -1, "Documentation du module", pos, size)
+        self.SetBackgroundColour(APP_BACKGROUND_COLOUR)
+        t = wx.StaticText(self, -1, text)
+        self.Show()
+
 class HeadTitle(wx.Panel):
     def __init__(self, parent, title):
         wx.Panel.__init__(self, parent, -1)
