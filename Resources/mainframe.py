@@ -1,3 +1,4 @@
+import sys
 import wx
 from wx.adv import AboutDialogInfo, AboutBox
 from pyo import *
@@ -112,8 +113,9 @@ class MainFrame(wx.Frame):
     def onHelpAbout(self, evt):
         info = AboutDialogInfo()
         info.SetName(APP_NAME)
-        info.SetVersion(APP_VERSION)
-        info.SetIcon(DSPDemo_Icon_Small.GetIcon())
+        info.SetVersion("Version " + APP_VERSION)
+        if sys.platform != "darwin":
+            info.SetIcon(DSPDemo_Icon_Small.GetIcon())
         info.SetCopyright("(C) 2018 Olivier Bélanger")
         info.SetDescription("\nDSPDemo est une application conçu pour analyser "
                             "et visualiser différents processus audio.\n")
