@@ -19,18 +19,18 @@ class MainFrame(wx.Frame):
         fileMenu.AppendSubMenu(moduleMenu, "Modules")
         fileMenu.AppendSeparator()
         fileMenu.Append(wx.ID_EXIT, "Quit\tCtrl+Q")
-        fileMenu.Bind(wx.EVT_MENU, self.on_quit, id=wx.ID_EXIT)
+        fileMenu.Bind(wx.EVT_MENU, self.onQuit, id=wx.ID_EXIT)
         helpMenu = wx.Menu()
         aboutItem = helpMenu.Append(wx.ID_ABOUT,
                                    '&About %s %s' % (APP_NAME, APP_VERSION))
         self.Bind(wx.EVT_MENU, self.onHelpAbout, aboutItem)
         helpMenu.Append(MODULE_DOC_ID, "Documentation du module\tCtrl+I")
-        helpMenu.Bind(wx.EVT_MENU, self.on_module_doc, id=MODULE_DOC_ID)
+        helpMenu.Bind(wx.EVT_MENU, self.onModuleDoc, id=MODULE_DOC_ID)
         self.menubar.Append(fileMenu, "File")
         self.menubar.Append(helpMenu, "Help")
         self.SetMenuBar(self.menubar)
 
-        self.Bind(wx.EVT_CLOSE, self.on_quit)
+        self.Bind(wx.EVT_CLOSE, self.onQuit)
 
         # Setup audio server.
         sr, outdev = audio_config()
@@ -100,23 +100,23 @@ class MainFrame(wx.Frame):
         wx.GetTopLevelParent(self).SetTitle(MODULES[index].name)
         self.outsig.value = self.module.output
         
-    def on_quit(self, evt):
+    def onQuit(self, evt):
         if self.server.getIsStarted():
             self.server.stop()
             time.sleep(0.25)
         self.Destroy()
 
-    def on_module_doc(self, evt):
+    def onModuleDoc(self, evt):
         doc_frame = DocFrame(self, self.module.__doc__)
 
     def onHelpAbout(self, evt):
         info = AboutDialogInfo()
-        info.Name = APP_NAME
-        info.Version = APP_VERSION
+        info.SetName(APP_NAME)
+        info.SetVersion(APP_VERSION)
         info.SetIcon(DSPDemo_Icon_Small.GetIcon())
-        info.Copyright = "(C) 2018 Olivier Bélanger"
-        info.Description = ("DSPDemo est une application conçu pour analyser "
-                            "et visualiser différents processus audio.\n\n")
+        info.SetCopyright("(C) 2018 Olivier Bélanger")
+        info.SetDescription("\nDSPDemo est une application conçu pour analyser "
+                            "et visualiser différents processus audio.\n")
         AboutBox(info)
 
     def createControlBox(self):
