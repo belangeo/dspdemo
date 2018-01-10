@@ -113,7 +113,7 @@ class MainFrame(wx.Frame):
     def onHelpAbout(self, evt):
         info = AboutDialogInfo()
         info.SetName(APP_NAME)
-        info.SetVersion("Version " + APP_VERSION)
+        info.SetVersion(APP_VERSION)
         if sys.platform != "darwin":
             info.SetIcon(DSPDemo_Icon_Small.GetIcon())
         info.SetCopyright("(C) 2018 Olivier Bélanger")
