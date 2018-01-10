@@ -25,7 +25,7 @@ class DSPDemoSplashScreen(wx.Frame):
         display = wx.Display(0)
         size = display.GetGeometry()[2:]
         st = wx.FRAME_SHAPED|wx.BORDER_SIMPLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP
-        wx.Frame.__init__(self, parent, -1, "", pos=(-1, size[1] // 6), style=st)
+        wx.Frame.__init__(self, parent, -1, "", pos=(-1, size[1]//6), style=st)
 
         self.callback = callback
 
@@ -43,7 +43,7 @@ class DSPDemoSplashScreen(wx.Frame):
         dc = wx.ClientDC(self)
         dc.DrawBitmap(self.bmp, 0, 0, True)
 
-        wx.CallLater(2500, self.OnClose)
+        wx.CallLater(2000, self.OnClose)
 
         self.Center(wx.HORIZONTAL)
         if sys.platform == 'win32':
@@ -63,7 +63,7 @@ class DSPDemoSplashScreen(wx.Frame):
         dc.DrawRectangle(0, 0, w, h)
         dc.DrawBitmap(self.bmp, 0, 0, True)
         dc.SetTextForeground("#333333")
-        dc.DrawLabel("%s v%s" % (APP_NAME, APP_VERSION), wx.Rect(70, 380, 200, 15))
+        dc.DrawLabel("%s v%s" % (APP_NAME, APP_VERSION), wx.Rect(70,380,200,15))
         dc.DrawLabel(APP_COPYRIGHT, wx.Rect(70, 400, 200, 15))
 
     def OnClose(self):

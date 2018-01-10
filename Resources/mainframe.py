@@ -1,8 +1,10 @@
 import wx
+from wx.adv import AboutDialogInfo, AboutBox
 from pyo import *
 from .modules import *
 from .utils import audio_config, dump_func
 from .widgets import DocFrame, HeadTitle, Knob
+from .images import DSPDemo_Icon_Small
 
 class MainFrame(wx.Frame):
     def __init__(self, parent, title, pos=(50, 50), size=(1000, 700)):
@@ -19,6 +21,9 @@ class MainFrame(wx.Frame):
         fileMenu.Append(wx.ID_EXIT, "Quit\tCtrl+Q")
         fileMenu.Bind(wx.EVT_MENU, self.on_quit, id=wx.ID_EXIT)
         helpMenu = wx.Menu()
+        aboutItem = helpMenu.Append(wx.ID_ABOUT,
+                                   '&About %s %s' % (APP_NAME, APP_VERSION))
+        self.Bind(wx.EVT_MENU, self.onHelpAbout, aboutItem)
         helpMenu.Append(MODULE_DOC_ID, "Documentation du module\tCtrl+I")
         helpMenu.Bind(wx.EVT_MENU, self.on_module_doc, id=MODULE_DOC_ID)
         self.menubar.Append(fileMenu, "File")
@@ -29,7 +34,7 @@ class MainFrame(wx.Frame):
 
         # Setup audio server.
         sr, outdev = audio_config()
-        self.server = Server(sr=sr, nchnls=AUDIO_NCHNLS, buffersize=512, duplex=0)
+        self.server = Server(sr, AUDIO_NCHNLS, AUDIO_BUFSIZE, AUDIO_DUPLEX)
         self.server.setOutputDevice(outdev)
         self.server.boot()
 
@@ -41,7 +46,7 @@ class MainFrame(wx.Frame):
         self.module.processing()
 
         # Audio vizualizers.
-        self.outgain = SigTo(0.7)
+        self.outgain = SigTo(0.5)
         self.outsig = Sig(self.module.output, mul=self.outgain)
         self.outspec = Spectrum(self.outsig, function=dump_func)
         self.outspec.function = None
@@ -104,6 +109,16 @@ class MainFrame(wx.Frame):
     def on_module_doc(self, evt):
         doc_frame = DocFrame(self, self.module.__doc__)
 
+    def onHelpAbout(self, evt):
+        info = AboutDialogInfo()
+        info.Name = APP_NAME
+        info.Version = APP_VERSION
+        info.SetIcon(DSPDemo_Icon_Small.GetIcon())
+        info.Copyright = "(C) 2018 Olivier Bélanger"
+        info.Description = ("DSPDemo est une application conçu pour analyser "
+                            "et visualiser différents processus audio.\n\n")
+        AboutBox(info)
+
     def createControlBox(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -130,11 +145,11 @@ class MainFrame(wx.Frame):
         sizer.Add(head, 0, wx.EXPAND|wx.BOTTOM, 2)
 
         amplabel = wx.StaticText(self.panel, -1, "Volume (dB)")
-        self.amp = PyoGuiControlSlider(self.panel, -60, 18, -12,
+        self.amp = PyoGuiControlSlider(self.panel, -60, 18, -6,
                                        orient=wx.HORIZONTAL)
         self.amp.setBackgroundColour(APP_BACKGROUND_COLOUR)
-
         self.amp.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeGain)
+
         self.meter = PyoGuiVuMeter(parent=self.panel, nchnls=AUDIO_NCHNLS,
                                    size=(5*AUDIO_NCHNLS, 200),
                                    orient=wx.HORIZONTAL)

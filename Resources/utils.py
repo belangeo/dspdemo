@@ -30,7 +30,6 @@ def audio_config():
             host = "core audio"
 
     indev, outdev = pa_get_default_devices_from_host(host)
-
     inputs, outputs = pa_get_devices_infos()
 
     sr = outputs[outdev]["default sr"]

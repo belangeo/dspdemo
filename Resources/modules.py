@@ -14,7 +14,7 @@ class TestModule(wx.Panel):
         Forme d'onde:
             Sélection de la forme d'onde.
         Fréquence en Hertz: 
-            Férquence fondamentale du son.
+            Fréquence fondamentale du son.
         Brillance: 
             Contrôle la quantité d'harmonique dans le son.
         Gain en dB:
@@ -40,7 +40,7 @@ class TestModule(wx.Panel):
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
 
         labelsh = wx.StaticText(self, -1, "Brillance")
-        self.sh = PyoGuiControlSlider(self, 0.01, 1, 0.5, log=True,
+        self.sh = PyoGuiControlSlider(self, 0.01, 1, 0.01, log=True,
                                       orient=wx.HORIZONTAL)
         self.sh.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.sh.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSharp)
@@ -74,6 +74,6 @@ class TestModule(wx.Panel):
         self.output.mul = pow(10, evt.value * 0.05)
 
     def processing(self):
-        self.output = LFO(freq=200, sharp=0.5, type=2, mul=0.707)
+        self.output = LFO(freq=200, sharp=0.01, type=2, mul=0.707)
 
 MODULES = [TestModule]
