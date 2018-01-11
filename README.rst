@@ -17,3 +17,11 @@ The toolkit used to create the graphical interface. (install with `pip install w
 
 * `pyo 0.8.8 <http://ajaxsoundstudio.com/software/pyo/>`_
 The audio engine with which the demos are coded.
+
+Once all requirements are met, clone or download the DSPDemo sources, 
+and in a terminal window, go to the DSPDemo sources folder and run with:
+
+.. code::
+
+    python3 dspdemo.py
+
