@@ -5,7 +5,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{A970BBE5-4FA8-496E-9823-2491D09DA043}
+AppId={{F36E72B3-D31D-4808-8F85-A9506960E905}
 AppName=DSPDemo
 AppVersion=0.0.1
 AppPublisher=ajaxsoundstudio.com
