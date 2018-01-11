@@ -4,7 +4,8 @@ from .constants import *
 
 class TestModule(wx.Panel):
     """
-    MODULE: TEST
+    Module: Test
+    ------------
 
     Ce module permet de sélectionner une forme d'onde et 
     de contrôler la fréquence fondamentale, la brillance
