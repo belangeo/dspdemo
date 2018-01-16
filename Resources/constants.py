@@ -1,5 +1,5 @@
 APP_NAME = 'DSPDemo'
-APP_VERSION = '0.0.1'
+APP_VERSION = '0.0.2'
 APP_COPYRIGHT = 'Olivier Bélanger, 2018'
 
 AUDIO_NCHNLS = 2
