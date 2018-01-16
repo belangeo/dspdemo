@@ -3,10 +3,15 @@ import wx
 from .constants import *
 
 class DocFrame(wx.Frame):
-    def __init__(self, parent, text, size=(600, 600)):
+    def __init__(self, parent, text, size=(750, 750)):
         wx.Frame.__init__(self, parent, -1, "Documentation du module", size=size)
-        self.SetBackgroundColour(APP_BACKGROUND_COLOUR)
-        t = wx.StaticText(self, -1, text)
+        panel = wx.Panel(self)
+        panel.SetBackgroundColour(APP_BACKGROUND_COLOUR)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        style = wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_DONTWRAP
+        textctrl = wx.TextCtrl(panel, -1, text, style=style)
+        sizer.Add(textctrl, 1, wx.EXPAND|wx.ALL, 5)
+        panel.SetSizerAndFit(sizer)
         self.CenterOnScreen()
         self.Show()
 

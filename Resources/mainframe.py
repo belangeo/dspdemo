@@ -19,16 +19,16 @@ class MainFrame(wx.Frame):
             moduleMenu.Bind(wx.EVT_MENU, self.loadModule, id=MODULE_FIRST_ID+i)
         fileMenu.AppendSubMenu(moduleMenu, "Modules")
         fileMenu.AppendSeparator()
-        fileMenu.Append(wx.ID_EXIT, "Quit\tCtrl+Q")
+        fileMenu.Append(wx.ID_EXIT, "Quitter\tCtrl+Q")
         fileMenu.Bind(wx.EVT_MENU, self.onQuit, id=wx.ID_EXIT)
         helpMenu = wx.Menu()
         aboutItem = helpMenu.Append(wx.ID_ABOUT,
-                                   '&About %s %s' % (APP_NAME, APP_VERSION))
+                                   'À propos de %s %s' % (APP_NAME, APP_VERSION))
         self.Bind(wx.EVT_MENU, self.onHelpAbout, aboutItem)
         helpMenu.Append(MODULE_DOC_ID, "Documentation du module\tCtrl+I")
         helpMenu.Bind(wx.EVT_MENU, self.onModuleDoc, id=MODULE_DOC_ID)
-        self.menubar.Append(fileMenu, "File")
-        self.menubar.Append(helpMenu, "Help")
+        self.menubar.Append(fileMenu, "Fichier")
+        self.menubar.Append(helpMenu, "Aide")
         self.SetMenuBar(self.menubar)
 
         self.Bind(wx.EVT_CLOSE, self.onQuit)
@@ -48,12 +48,12 @@ class MainFrame(wx.Frame):
 
         # Audio vizualizers.
         self.outgain = SigTo(0.5)
-        self.outsig = Sig(self.module.output, mul=self.outgain)
+        self.outsig = Sig(self.module.output)
         self.outspec = Spectrum(self.outsig, function=dump_func)
         self.outspec.function = None
         self.outscope = Scope(self.outsig, function=dump_func)
         self.outscope.function = None
-        self.mixoutsig = self.outsig.mix(2).out()
+        self.mixoutsig = Mix(self.outsig, voices=2, mul=self.outgain).out()
 
         mainsizer = wx.BoxSizer(wx.HORIZONTAL)
         leftbox = wx.BoxSizer(wx.VERTICAL)
@@ -99,6 +99,9 @@ class MainFrame(wx.Frame):
         oldmodule.Destroy()
         self.leftboxmid.Layout()
         wx.GetTopLevelParent(self).SetTitle(MODULES[index].name)
+        self.connectModuleToOutput()
+
+    def connectModuleToOutput(self):
         self.outsig.value = self.module.output
         
     def onQuit(self, evt):
@@ -119,7 +122,7 @@ class MainFrame(wx.Frame):
         info.SetCopyright("(C) 2018 Olivier Bélanger")
         info.SetDescription("\nDSPDemo est une application conçu pour analyser "
                             "et visualiser différents processus audio.\n")
-        AboutBox(info)
+        AboutBox(info, self)
 
     def createControlBox(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -170,10 +173,6 @@ class MainFrame(wx.Frame):
 
         toolbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.specFreeze = wx.ToggleButton(self.panel, -1, label="Freeze")
-        self.specFreeze.Bind(wx.EVT_TOGGLEBUTTON, self.specFreezeIt)
-        toolbox.Add(self.specFreeze, 1, wx.TOP|wx.LEFT, 5)
-
         self.specFreq = wx.ToggleButton(self.panel, -1, label="Freq Log")
         self.specFreq.SetValue(0)
         self.specFreq.Bind(wx.EVT_TOGGLEBUTTON, self.specFreqScale)
@@ -223,7 +222,7 @@ class MainFrame(wx.Frame):
 
         toolbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        label = wx.StaticText(self.panel, -1, label="Window length (ms):")
+        label = wx.StaticText(self.panel, -1, label="Taille de la fenêtre (ms):")
         toolbox.Add(label, 0, wx.LEFT|wx.TOP, 11)
 
         self.scopeLength = PyoGuiControlSlider(self.panel, 10, 1000, 50,
@@ -258,14 +257,6 @@ class MainFrame(wx.Frame):
             self.server.recstop()
 
     ### Spectrum methods ###
-    def specFreezeIt(self, evt):
-        if evt.GetInt() == 1:
-            self.spectrum.obj.poll(0)
-            self.specFreeze.SetLabel("Live")
-        else:
-            self.spectrum.obj.poll(1)
-            self.specFreeze.SetLabel("Freeze")
-
     def specFreqScale(self, evt):
         if evt.GetInt() == 1:
             self.spectrum.setFscaling(1)
