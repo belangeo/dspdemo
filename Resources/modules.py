@@ -249,7 +249,7 @@ class QuantizeModule(wx.Panel):
         self.sh.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSharp)
 
         labelbt = wx.StaticText(self, -1, "# de bits de quantification")
-        self.bt = PyoGuiControlSlider(self, 2, 16, 16, log=False, integer=True,
+        self.bt = PyoGuiControlSlider(self, 2, 16, 16, log=False, integer=False,
                                       orient=wx.HORIZONTAL)
         self.bt.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.bt.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBits)
