@@ -4,13 +4,64 @@ from wx.adv import AboutDialogInfo, AboutBox
 from pyo import *
 from .modules import *
 from .utils import audio_config, dump_func
-from .widgets import DocFrame, HeadTitle, Knob
+from .widgets import DocFrame, HeadTitle, Knob, ShowCapture
 from .images import DSPDemo_Icon_Small
 
 class MainFrame(wx.Frame):
     def __init__(self, parent, title, pos=(50, 50), size=(1000, 700)):
         wx.Frame.__init__(self, parent, -1, title, pos, size)
 
+        self.Bind(wx.EVT_CLOSE, self.onQuit)
+
+        self.panel = wx.Panel(self)
+        self.panel.SetBackgroundColour(APP_BACKGROUND_COLOUR)
+
+        self.createMenuBar()
+
+        self.createAudioServer()
+
+        self.loadInitModule()
+
+        mainsizer = wx.BoxSizer(wx.HORIZONTAL)
+        leftbox = wx.BoxSizer(wx.VERTICAL)
+        rightbox = wx.BoxSizer(wx.VERTICAL)
+
+        leftboxup = wx.BoxSizer(wx.VERTICAL)
+        self.leftboxmid = wx.BoxSizer(wx.VERTICAL)
+        leftboxdown = wx.BoxSizer(wx.VERTICAL)
+
+        if WITH_VIDEO_CAPTURE:
+            leftboxcam = self.createCaptureBox()
+
+        sizer1 = self.createControlBox()
+        sizer2 = self.createOutputBox()
+        sizer5 = self.createSpectrum()
+        sizer6 = self.createScope()
+
+        leftboxup.Add(sizer1, 1, wx.LEFT|wx.RIGHT|wx.TOP|wx.EXPAND, 5)
+
+        head = HeadTitle(self.panel, "Interface du Module")
+        self.leftboxmid.Add(head, 0, wx.EXPAND|wx.ALL, 5)
+        self.leftboxmid.Add(self.module, 1, wx.EXPAND|wx.ALL, 5)
+
+        leftboxdown.Add(sizer2, 1, wx.ALL|wx.EXPAND, 5)
+
+        leftbox.Add(leftboxup, 0, wx.EXPAND)
+        leftbox.Add(self.leftboxmid, 1, wx.EXPAND)
+        if WITH_VIDEO_CAPTURE:
+            leftbox.Add(leftboxcam, 0, wx.EXPAND)
+        leftbox.Add(leftboxdown, 0, wx.EXPAND)
+
+        rightbox.Add(sizer5, 1, wx.TOP|wx.RIGHT|wx.EXPAND, 5)
+        rightbox.Add(sizer6, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 5)
+
+        mainsizer.Add(leftbox, 1, wx.TOP|wx.BOTTOM|wx.LEFT|wx.EXPAND, 2)
+        mainsizer.Add(rightbox, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 2)
+        self.panel.SetSizerAndFit(mainsizer)
+
+        self.Show()
+
+    def createMenuBar(self):
         self.menubar = wx.MenuBar()
         fileMenu = wx.Menu()
         moduleMenu = wx.Menu()
@@ -31,63 +82,35 @@ class MainFrame(wx.Frame):
         self.menubar.Append(helpMenu, "Aide")
         self.SetMenuBar(self.menubar)
 
-        self.Bind(wx.EVT_CLOSE, self.onQuit)
-
+    def createAudioServer(self):
         # Setup audio server.
         sr, outdev = audio_config()
         self.server = Server(sr, AUDIO_NCHNLS, AUDIO_BUFSIZE, AUDIO_DUPLEX)
         self.server.setOutputDevice(outdev)
         self.server.boot()
 
-        self.panel = wx.Panel(self)
-        self.panel.SetBackgroundColour(APP_BACKGROUND_COLOUR)
-
-        self.module = TestModule(self.panel)
-        self.module.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
-        self.module.processing()
-
         # Audio vizualizers.
         self.outgain = SigTo(0.5)
-        self.outsig = Sig(self.module.output)
+        self.outsig = Sig([0,0])
         self.outspec = Spectrum(self.outsig, function=dump_func)
         self.outspec.function = None
         self.outscope = Scope(self.outsig, function=dump_func)
         self.outscope.function = None
-        self.mixoutsig = Mix(self.outsig, voices=2, mul=self.outgain).out()
+        if WITH_VIDEO_CAPTURE:
+            self.voicerec = Input([0, 1], mul=0.7).out()
+            self.fol = Follower(self.voicerec, freq=4)
+            self.talk = self.fol > 0.025
+            self.amp = Port(self.talk, risetime=0.1, falltime=0.5)
+            self.ampscl = Scale(self.amp, outmin=1, outmax=0.2)
+        else:
+            self.ampscl = Sig(1)
+        self.mixoutsig = Mix(self.outsig, voices=2, mul=self.outgain*self.ampscl).out()
 
-        mainsizer = wx.BoxSizer(wx.HORIZONTAL)
-        leftbox = wx.BoxSizer(wx.VERTICAL)
-        rightbox = wx.BoxSizer(wx.VERTICAL)
-
-        leftboxup = wx.BoxSizer(wx.VERTICAL)
-        self.leftboxmid = wx.BoxSizer(wx.VERTICAL)
-        leftboxdown = wx.BoxSizer(wx.VERTICAL)
-
-        sizer1 = self.createControlBox()
-        sizer2 = self.createOutputBox()
-        sizer5 = self.createSpectrum()
-        sizer6 = self.createScope()
-
-        leftboxup.Add(sizer1, 1, wx.ALL | wx.EXPAND, 5)
-
-        head = HeadTitle(self.panel, "Interface du Module")
-        self.leftboxmid.Add(head, 0, wx.EXPAND|wx.ALL, 5)
-        self.leftboxmid.Add(self.module, 1, wx.EXPAND|wx.ALL, 5)
-
-        leftboxdown.Add(sizer2, 1, wx.ALL | wx.EXPAND, 5)
-
-        leftbox.Add(leftboxup, 0, wx.EXPAND)
-        leftbox.Add(self.leftboxmid, 1, wx.EXPAND)
-        leftbox.Add(leftboxdown, 0, wx.EXPAND)
-
-        rightbox.Add(sizer5, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 5)
-        rightbox.Add(sizer6, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 5)
-
-        mainsizer.Add(leftbox, 1, wx.TOP|wx.BOTTOM|wx.LEFT | wx.EXPAND, 2)
-        mainsizer.Add(rightbox, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 2)
-        self.panel.SetSizerAndFit(mainsizer)
-
-        self.Show()
+    def loadInitModule(self):
+        self.module = ResamplingModule(self.panel)
+        self.module.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.module.processing()
+        self.connectModuleToOutput()
 
     def loadModule(self, evt):
         index = evt.GetId() - MODULE_FIRST_ID
@@ -143,6 +166,12 @@ class MainFrame(wx.Frame):
 
         return sizer
 
+    def createCaptureBox(self):
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.webcam = ShowCapture(self.panel)
+        sizer.Add(self.webcam, 0, wx.CENTER | wx.ALL, 5)
+        return sizer
+
     def createOutputBox(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -160,9 +189,9 @@ class MainFrame(wx.Frame):
                                    orient=wx.HORIZONTAL)
         self.server.setMeter(self.meter)
 
-        sizer.Add(amplabel, 0, wx.ALL | wx.EXPAND, 4)
-        sizer.Add(self.amp, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 5)
-        sizer.Add(self.meter, 0, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(amplabel, 0, wx.LEFT|wx.TOP|wx.EXPAND, 5)
+        sizer.Add(self.amp, 0, wx.LEFT|wx.RIGHT|wx.EXPAND, 5)
+        sizer.Add(self.meter, 0, wx.LEFT|wx.RIGHT|wx.TOP|wx.EXPAND, 5)
         return sizer
 
     def createSpectrum(self):
@@ -176,31 +205,26 @@ class MainFrame(wx.Frame):
         self.specFreq = wx.ToggleButton(self.panel, -1, label="Freq Log")
         self.specFreq.SetValue(0)
         self.specFreq.Bind(wx.EVT_TOGGLEBUTTON, self.specFreqScale)
-        toolbox.Add(self.specFreq, 1, wx.TOP|wx.LEFT, 5)
+        toolbox.Add(self.specFreq, 1, wx.TOP|wx.LEFT, 4)
 
         self.specMag = wx.ToggleButton(self.panel, -1, label="Mag Log")
         self.specMag.SetValue(1)
         self.specMag.Bind(wx.EVT_TOGGLEBUTTON, self.specMagScale)
-        toolbox.Add(self.specMag, 1, wx.TOP|wx.LEFT, 5)
+        toolbox.Add(self.specMag, 1, wx.TOP|wx.LEFT, 4)
 
-        winchoices = ["Rectangular", "Hamming", "Hanning", "Bartlett", 
-                      "Blackman 3-term", "Blackman-Harris 4", 
-                      "Blackman-Harris 7", "Tuckey", "Half-sine"]
-        self.specWin = wx.Choice(self.panel, -1, choices=winchoices)
+        self.specWin = wx.Choice(self.panel, -1, choices=WINCHOICES)
         self.specWin.SetSelection(2)
         self.specWin.Bind(wx.EVT_CHOICE, self.specWinType)
-        toolbox.Add(self.specWin, 1, wx.TOP|wx.LEFT, 5)
+        toolbox.Add(self.specWin, 1, wx.TOP|wx.LEFT, 4)
 
-        sizechoices = ["64", "128", "256", "512", "1024",
-                       "2048", "4096", "8192", "16384"]
-        self.specSize = wx.Choice(self.panel, -1, choices=sizechoices)
+        self.specSize = wx.Choice(self.panel, -1, choices=SIZECHOICES)
         self.specSize.SetSelection(4)
         self.specSize.Bind(wx.EVT_CHOICE, self.specSetSize)
-        toolbox.Add(self.specSize, 1, wx.TOP|wx.LEFT, 5)
+        toolbox.Add(self.specSize, 1, wx.TOP|wx.LEFT, 4)
 
         self.specAmp = Knob(self.panel, outFunction=self.specSetAmp)
         self.specAmp.SetBackgroundColour(APP_BACKGROUND_COLOUR)
-        toolbox.Add(self.specAmp, 0.1, wx.TOP|wx.LEFT|wx.RIGHT, 7)
+        toolbox.Add(self.specAmp, 0.1, wx.TOP|wx.LEFT|wx.RIGHT, 6)
         
         sizer.Add(toolbox, 0, wx.EXPAND)
 
@@ -222,13 +246,12 @@ class MainFrame(wx.Frame):
 
         toolbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        label = wx.StaticText(self.panel, -1, label="Taille de la fenêtre (ms):")
+        label = wx.StaticText(self.panel, -1, "Taille de la fenêtre (ms):")
         toolbox.Add(label, 0, wx.LEFT|wx.TOP, 11)
 
         self.scopeLength = PyoGuiControlSlider(self.panel, 10, 1000, 50,
                                                log=True, orient=wx.HORIZONTAL)
         self.scopeLength.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.scopeSetLength)
-
         self.scopeLength.setBackgroundColour(APP_BACKGROUND_COLOUR)
         toolbox.Add(self.scopeLength, 1, wx.TOP|wx.LEFT, 14)
 
@@ -258,16 +281,10 @@ class MainFrame(wx.Frame):
 
     ### Spectrum methods ###
     def specFreqScale(self, evt):
-        if evt.GetInt() == 1:
-            self.spectrum.setFscaling(1)
-        else:
-            self.spectrum.setFscaling(0)
+        self.spectrum.setFscaling(evt.GetInt())
 
     def specMagScale(self, evt):
-        if evt.GetInt() == 1:
-            self.spectrum.setMscaling(1)
-        else:
-            self.spectrum.setMscaling(0)
+        self.spectrum.setMscaling(evt.GetInt())
 
     def specWinType(self, evt):
         self.spectrum.obj.wintype = evt.GetInt()

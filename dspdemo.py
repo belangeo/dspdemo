@@ -10,3 +10,6 @@ if __name__ == "__main__":
     app = wx.App(False)
     sp = DSPDemoSplashScreen(None, callback=onStart)
     app.MainLoop()
+
+# video compression:
+# ffmpeg -i 01_echantillonnage.mkv -vcodec libx264 -crf 28 01_echantillonnage_crf28.mkv

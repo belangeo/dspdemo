@@ -1,6 +1,11 @@
 import math
 import wx
 from .constants import *
+try:
+    import cv2
+    FOUND_CV2 = True
+except:
+    FOUND_CV2 = False
 
 class DocFrame(wx.Frame):
     def __init__(self, parent, text, size=(750, 750)):
@@ -99,3 +104,44 @@ class Knob(wx.Panel):
 
         if self.outFunction is not None:
             self.outFunction(self.tempval)
+
+if FOUND_CV2:
+    capture = cv2.VideoCapture(0)
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 240)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 180)
+    class ShowCapture(wx.Panel):
+        def __init__(self, parent, fps=30):
+            wx.Panel.__init__(self, parent)
+            self.SetBackgroundColour(APP_BACKGROUND_COLOUR)
+
+            self.capture = capture
+            ret, frame = self.capture.read()
+
+            height, width = frame.shape[:2]
+            self.SetMinSize((width, height))
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            self.bmp = wx.Bitmap.FromBuffer(width, height, frame)
+
+            self.timer = wx.Timer(self)
+            self.timer.Start(1000./fps)
+
+            self.Bind(wx.EVT_PAINT, self.OnPaint)
+            self.Bind(wx.EVT_TIMER, self.NextFrame)
+
+
+        def OnPaint(self, evt):
+            dc = wx.BufferedPaintDC(self)
+            dc.DrawBitmap(self.bmp, 0, 0)
+
+        def NextFrame(self, event):
+            ret, frame = self.capture.read()
+            if ret:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                self.bmp.CopyFromBuffer(frame)
+                self.Refresh()
+else:
+    class ShowCapture(wx.Panel):
+        def __init__(self, parent, fps=30):
+            wx.Panel.__init__(self, parent)
+            self.SetBackgroundColour(APP_BACKGROUND_COLOUR)
