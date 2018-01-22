@@ -97,7 +97,7 @@ class MainFrame(wx.Frame):
         self.outscope = Scope(self.outsig, function=dump_func)
         self.outscope.function = None
         if WITH_VIDEO_CAPTURE:
-            self.voicerec = Input([0, 1], mul=0.7).out()
+            self.voicerec = Input(0, mul=1).mix(2).out()
             self.fol = Follower(self.voicerec, freq=4)
             self.talk = self.fol > 0.025
             self.amp = Port(self.talk, risetime=0.1, falltime=0.5)

@@ -1,6 +1,183 @@
 import wx
 from pyo import *
 from .constants import *
+from .bandlimited import DSPDemoBLOsc
+
+class InputPanel(wx.Choicebook):
+    def __init__(self, parent):
+        wx.Choicebook.__init__(self, parent, -1, size=(300, -1))
+        # Oscillateur auto-modulant, Pulse-Width-Modulation
+        sources = [("Fichier sonore", self.createSoundfilePanel), 
+                   ("Oscillateur anti-alias", self.createOscillatorPanel),
+                   ("Générateur de bruit", self.createNoisePanel)]
+        for source in sources:
+            panel = source[1]()
+            self.AddPage(panel, source[0])
+        self.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, self.OnPageChanged)
+
+        ### Audio processing ###
+        # Soundfile player
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = Looper(self.soundtable, pitch=1, mode=0).stop()
+        # Band-limited oscillator 
+        self.oscfreq = SigTo(250, 0.05)
+        self.oscbright = SigTo(0.5, 0.05)
+        self.oscshape = SigTo(0, 0.05)
+        self.oscillator = DSPDemoBLOsc(freq=self.oscfreq, bright=self.oscbright,
+                                       shape=self.oscshape)
+        # Noise generator
+        self.whitenoise = Noise()
+        self.pinknoise = PinkNoise()
+        self.brownnoise = BrownNoise()
+        self.noisegenerator = InputFader(self.whitenoise)
+
+        # Audio output
+        self.output = InputFader(self.soundfile)
+
+    def OnPageChanged(self, evt):
+        sel = evt.GetSelection()
+        obj = [self.soundfile, self.oscillator, self.noisegenerator][sel]
+        self.output.setInput(obj, 0.1)
+
+    def createSoundfilePanel(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        loadbutton = wx.Button(panel, -1, "Choisir")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        playbutton = wx.ToggleButton(panel, -1, "Jouer")
+        playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
+        row1.Add(playbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        loopbutton = wx.ToggleButton(panel, -1, "Loop")
+        loopbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onLoopSoundfile)
+        row1.Add(loopbutton, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(row1, 0, wx.EXPAND)
+
+        labelpit = wx.StaticText(panel, -1, "Transposition")
+        self.spit = PyoGuiControlSlider(panel, 0.25, 4, 1, log=True, size=(140, 16))
+        self.spit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onSoundfileSpeed)
+        sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.spit, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        panel.SetSizerAndFit(sizer)
+        return panel
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir un fichier son",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.dur = self.soundtable.getDur()
+
+        dlg.Destroy()
+
+    def onPlaySoundfile(self, evt):
+        if evt.GetInt():
+            self.soundfile.play()
+        else:
+            self.soundfile.stop()
+
+    def onLoopSoundfile(self, evt):
+        self.soundfile.mode = evt.GetInt()
+
+    def onSoundfileSpeed(self, evt):
+        self.soundfile.pitch = evt.value
+
+    def createOscillatorPanel(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        pitbox = wx.BoxSizer(wx.VERTICAL)
+        labelpit = wx.StaticText(panel, -1, "Fréquence")
+        self.opit = PyoGuiControlSlider(panel, 20, 4000, 250, log=True)
+        self.opit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onOscillatorFreq)
+        sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.opit, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        row2 = wx.BoxSizer(wx.HORIZONTAL)
+
+        shpbox = wx.BoxSizer(wx.VERTICAL)
+        labelshp = wx.StaticText(panel, -1, "Forme d'onde")
+        self.oshp = PyoGuiControlSlider(panel, 0, 1, 0, log=False, size=(120, 16))
+        self.oshp.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onOscillatorShape)
+        shpbox.Add(labelshp, 0, wx.LEFT|wx.TOP, 5)
+        shpbox.Add(self.oshp, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        brtbox = wx.BoxSizer(wx.VERTICAL)
+        labelbrt = wx.StaticText(panel, -1, "Brillance")
+        self.obrt = PyoGuiControlSlider(panel, 0, 1, 0.5, log=False, size=(120, 16))
+        self.obrt.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onOscillatorBright)
+        brtbox.Add(labelbrt, 0, wx.LEFT|wx.TOP, 5)
+        brtbox.Add(self.obrt, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        row2.Add(shpbox, 1)
+        row2.Add(brtbox, 1)
+
+        sizer.Add(row2, 0, wx.EXPAND)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        panel.SetSizerAndFit(sizer)
+        return panel
+
+    def onOscillatorFreq(self, evt):
+        self.oscfreq.value = evt.value
+
+    def onOscillatorBright(self, evt):
+        self.oscbright.value = evt.value
+
+    def onOscillatorShape(self, evt):
+        self.oscshape.value = evt.value
+
+    def createNoisePanel(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+
+        choices = ["Bruit blanc", "Bruit rose", "Bruit brun"]
+        ntyp = wx.RadioBox(panel, -1, "", wx.DefaultPosition, wx.DefaultSize,
+                           choices, 3, wx.RA_SPECIFY_ROWS | wx.NO_BORDER)
+        ntyp.Bind(wx.EVT_RADIOBOX, self.onNoiseType)
+        sizer.Add(ntyp, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        panel.SetSizerAndFit(sizer)
+        return panel
+
+    def onNoiseType(self, evt):
+        sel = evt.GetInt()
+        obj = [self.whitenoise, self.pinknoise, self.brownnoise][sel]
+        self.noisegenerator.setInput(obj, 0.1)
 
 class ResamplingModule(wx.Panel):
     """
@@ -93,6 +270,7 @@ class ResamplingModule(wx.Panel):
         self.SetSizer(sizer)
 
     def changeFreq(self, evt):
+        print(self.GetSize())
         self.source.freq = evt.value
 
     def changeSharp(self, evt):
@@ -235,4 +413,24 @@ class QuantizeModule(wx.Panel):
         self.qnoise = self.degrade - self.blocked
         self.output = InputFader(self.degrade)
 
-MODULES = [ResamplingModule, QuantizeModule]
+class FiltersModule(wx.Panel):
+    """
+    Module: 01-Échantillonnage
+    --------------------------
+
+
+    """
+    name = "02-Filtres"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        self.SetSizer(sizer)
+
+    def processing(self):
+        self.output = self.inputpanel.output
+
+MODULES = [ResamplingModule, QuantizeModule, FiltersModule]
