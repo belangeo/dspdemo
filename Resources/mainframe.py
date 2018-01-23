@@ -104,7 +104,7 @@ class MainFrame(wx.Frame):
             self.ampscl = Scale(self.amp, outmin=1, outmax=0.2)
         else:
             self.ampscl = Sig(1)
-        self.mixoutsig = Mix(self.outsig, voices=2, mul=self.outgain*self.ampscl).out()
+        self.mixoutsig = Mix(self.outsig, 2, self.outgain*self.ampscl).out()
 
     def loadInitModule(self):
         self.module = ResamplingModule(self.panel)

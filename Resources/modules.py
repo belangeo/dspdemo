@@ -4,11 +4,71 @@ from .constants import *
 from .bandlimited import DSPDemoBLOsc
 
 class InputPanel(wx.Choicebook):
+    """
+    Section permettant de sélectionner le son source.
+        
+    Le menu déroulant permet de sélectionner le son source parmi
+    un choix de son de synthèse ou de lecture de fichier audio.
+
+    # Oscillateur anti-alias #
+
+    Oscillateur dont la quantité d'harmoniques est contrôlée
+    automatiquement afin qu'il n'y ait jamais de composantes
+    au-dessus de la fréquence de Nyquist (peu importe la 
+    fréquence fondamentale).
+
+    Contrôles:
+        Fréquence: 
+            Fréquence fondamentale du signal en Hertz.
+        Forme d'onde:
+            Interpolation entre 4 types de formes d'onde.
+            0.0 = train d'impulsions
+            0.25 = onde en dent de scie
+            0.7 = onde carrée
+            1.0 = onde triangulaire
+        Brillance:
+            Richesse spectrale du son. À 0, le signal est
+            une onde sinusoïdale tandis qu'à 1, le signal
+            contient des harmoniques jusqu'à concurences
+            de la fréquence de Nyquist.
+
+    # Fichier sonore #
+
+    Lecture d'un fichier audio mono ou stéréo (WAV ou AIFF).
+
+    Contrôles:
+        Ouvrir:
+            Bouton permettant de sélectionner le fichier son à
+            lire.
+        Jouer:
+            Démarre / arrête la lecture du son.
+        Loop:
+            Active le mode de lecture en boucle.
+        Vitesse de lecture:
+            Transposition directe (par variation de la vitesse 
+            de lecture) du son lu. Plus le son est lu lentement,
+            plus le son est grave.
+
+    # Générateur de bruit #
+
+    Différents générateurs de bruit (signaux aléatoires).
+
+    Contrôles:
+        Bruit blanc: toutes les fréquences sont présentes en
+                     proportion statistiquement égale.
+        Bruit rose: bruit blanc atténué par une pente de -3 dB
+                    par octave.
+        Bruit brun: bruit blanc atténué par une pente de -6 dB
+                    par octave.
+
+    """
     def __init__(self, parent):
         wx.Choicebook.__init__(self, parent, -1, size=(300, -1))
+        self.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
+
         # Oscillateur auto-modulant, Pulse-Width-Modulation
-        sources = [("Fichier sonore", self.createSoundfilePanel), 
-                   ("Oscillateur anti-alias", self.createOscillatorPanel),
+        sources = [("Oscillateur anti-alias", self.createOscillatorPanel),
+                   ("Fichier sonore", self.createSoundfilePanel),
                    ("Générateur de bruit", self.createNoisePanel)]
         for source in sources:
             panel = source[1]()
@@ -16,15 +76,18 @@ class InputPanel(wx.Choicebook):
         self.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, self.OnPageChanged)
 
         ### Audio processing ###
-        # Soundfile player
-        self.soundtable = SndTable(initchnls=2)
-        self.soundfile = Looper(self.soundtable, pitch=1, mode=0).stop()
         # Band-limited oscillator 
         self.oscfreq = SigTo(250, 0.05)
         self.oscbright = SigTo(0.5, 0.05)
-        self.oscshape = SigTo(0, 0.05)
+        self.oscshape = SigTo(0.25, 0.05)
         self.oscillator = DSPDemoBLOsc(freq=self.oscfreq, bright=self.oscbright,
                                        shape=self.oscshape)
+
+        # Soundfile player
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = TableRead(self.soundtable, freq=1, loop=0, interp=4)
+        self.soundcall = TrigFunc(self.soundfile["trig"][0], self.onSoundfileEnd)
+
         # Noise generator
         self.whitenoise = Noise()
         self.pinknoise = PinkNoise()
@@ -32,75 +95,12 @@ class InputPanel(wx.Choicebook):
         self.noisegenerator = InputFader(self.whitenoise)
 
         # Audio output
-        self.output = InputFader(self.soundfile)
+        self.output = InputFader(self.oscillator)
 
     def OnPageChanged(self, evt):
         sel = evt.GetSelection()
-        obj = [self.soundfile, self.oscillator, self.noisegenerator][sel]
+        obj = [self.oscillator, self.soundfile, self.noisegenerator][sel]
         self.output.setInput(obj, 0.1)
-
-    def createSoundfilePanel(self):
-        panel = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        sizer.AddSpacer(5)
-        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
-        sizer.AddSpacer(5)
-
-        row1 = wx.BoxSizer(wx.HORIZONTAL)
-
-        loadbutton = wx.Button(panel, -1, "Choisir")
-        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
-        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
-
-        playbutton = wx.ToggleButton(panel, -1, "Jouer")
-        playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
-        row1.Add(playbutton, 1, wx.ALL|wx.EXPAND, 5)
-
-        loopbutton = wx.ToggleButton(panel, -1, "Loop")
-        loopbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onLoopSoundfile)
-        row1.Add(loopbutton, 1, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(row1, 0, wx.EXPAND)
-
-        labelpit = wx.StaticText(panel, -1, "Transposition")
-        self.spit = PyoGuiControlSlider(panel, 0.25, 4, 1, log=True, size=(140, 16))
-        self.spit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onSoundfileSpeed)
-        sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
-        sizer.Add(self.spit, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
-
-        sizer.AddSpacer(5)
-        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
-        sizer.AddSpacer(5)
-
-        panel.SetSizerAndFit(sizer)
-        return panel
-
-    def onLoadSoundfile(self, evt):
-        dlg = wx.FileDialog(
-            self, message="Choisir un fichier son",
-            defaultDir=os.getcwd(),
-            defaultFile="",
-            style=wx.FD_OPEN | wx.FD_PREVIEW)
-
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            if sndinfo(path) is not None:
-                self.soundtable.setSound(path)
-                self.soundfile.dur = self.soundtable.getDur()
-
-        dlg.Destroy()
-
-    def onPlaySoundfile(self, evt):
-        if evt.GetInt():
-            self.soundfile.play()
-        else:
-            self.soundfile.stop()
-
-    def onLoopSoundfile(self, evt):
-        self.soundfile.mode = evt.GetInt()
-
-    def onSoundfileSpeed(self, evt):
-        self.soundfile.pitch = evt.value
 
     def createOscillatorPanel(self):
         panel = wx.Panel(self)
@@ -121,14 +121,14 @@ class InputPanel(wx.Choicebook):
 
         shpbox = wx.BoxSizer(wx.VERTICAL)
         labelshp = wx.StaticText(panel, -1, "Forme d'onde")
-        self.oshp = PyoGuiControlSlider(panel, 0, 1, 0, log=False, size=(120, 16))
+        self.oshp = PyoGuiControlSlider(panel, 0, 1, 0.25, size=(120, 16))
         self.oshp.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onOscillatorShape)
         shpbox.Add(labelshp, 0, wx.LEFT|wx.TOP, 5)
         shpbox.Add(self.oshp, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
 
         brtbox = wx.BoxSizer(wx.VERTICAL)
         labelbrt = wx.StaticText(panel, -1, "Brillance")
-        self.obrt = PyoGuiControlSlider(panel, 0, 1, 0.5, log=False, size=(120, 16))
+        self.obrt = PyoGuiControlSlider(panel, 0, 1, 0.5, size=(120, 16))
         self.obrt.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onOscillatorBright)
         brtbox.Add(labelbrt, 0, wx.LEFT|wx.TOP, 5)
         brtbox.Add(self.obrt, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
@@ -153,6 +153,73 @@ class InputPanel(wx.Choicebook):
 
     def onOscillatorShape(self, evt):
         self.oscshape.value = evt.value
+
+    def createSoundfilePanel(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        loadbutton = wx.Button(panel, -1, "Choisir")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        self.playbutton = wx.ToggleButton(panel, -1, "Jouer")
+        self.playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
+        row1.Add(self.playbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        loopbutton = wx.ToggleButton(panel, -1, "Loop")
+        loopbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onLoopSoundfile)
+        row1.Add(loopbutton, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(row1, 0, wx.EXPAND)
+
+        labelpit = wx.StaticText(panel, -1, "Vitesse de lecture")
+        self.spit = PyoGuiControlSlider(panel, 0.25, 4, 1, log=True)
+        self.spit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onSoundfileSpeed)
+        sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.spit, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        panel.SetSizerAndFit(sizer)
+        return panel
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir un fichier son",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.freq = self.soundtable.getRate()
+
+        dlg.Destroy()
+
+    def onPlaySoundfile(self, evt):
+        if evt.GetInt():
+            self.soundfile.play()
+        else:
+            self.soundfile.stop()
+
+    def onSoundfileEnd(self):
+        if not self.soundfile.loop:
+            self.playbutton.SetValue(False)
+
+    def onLoopSoundfile(self, evt):
+        self.soundfile.loop = evt.GetInt()
+
+    def onSoundfileSpeed(self, evt):
+        self.soundfile.freq = self.soundtable.getRate() * evt.value
 
     def createNoisePanel(self):
         panel = wx.Panel(self)
@@ -184,18 +251,17 @@ class ResamplingModule(wx.Panel):
     Module: 01-Échantillonnage
     --------------------------
 
-    Ce module illustre l'effet de l'opération d'échantillonnage sur le
-    spectre de fréquence d'un signal. Il est composé d'un signal source
-    dont on peut contrôler la fréquence fondamentale et la quantité 
-    d'harmoniques, d'un choix de fréquence d'échantillonnage (en division
-    de la fréquence d'échantillonnage courante), d'un filtre anti-repliement
-    et d'un filtre de reconstruction.
+    Ce module illustre l'effet de l'opération d'échantillonnage sur 
+    le spectre de fréquence d'un signal. Il est composé d'un choix 
+    de fréquences d'échantillonnage (en division de la fréquence 
+    d'échantillonnage courante), d'un filtre anti-repliement 
+    (appliqué avant le ré-échantillonnage afin de contrôler le
+    repliement de spectre) et d'un filtre de reconstruction 
+    (appliqué avant la reconstruction du signal afin d'éliminer
+    les copies du spectre d'origine apparues lors de la numérisation
+    du signal).
 
     Contrôles:
-        Fréquence fondamentale en Hertz: 
-            Fréquence fondamentale du signal original.
-        Quantité d'harmoniques: 
-            Contrôle la quantité d'harmonique dans le signal original.
         Ré-échantillonnage:
             Choix de la nouvelle fréquence d'échantillonnage.
             "sr" : aucun ré-échantillonnage
@@ -228,17 +294,8 @@ class ResamplingModule(wx.Panel):
 
         self.factor = -1
 
-        labelfr = wx.StaticText(self, -1, "Fréquence fondamentale en Hz")
-        self.fr = PyoGuiControlSlider(self, 20, 5000, 686, log=True,
-                                      orient=wx.HORIZONTAL)
-        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
-
-        labelsh = wx.StaticText(self, -1, "Quantité d'harmoniques")
-        self.sh = PyoGuiControlSlider(self, 0, 1, 0, log=False,
-                                      orient=wx.HORIZONTAL)
-        self.sh.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-        self.sh.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSharp)
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
 
         downlabel = wx.StaticText(self, -1, "Ré-échantillonnage")
         self.down = wx.Choice(self, -1, choices=["sr", "sr/2", "sr/4", "sr/8"])
@@ -257,10 +314,6 @@ class ResamplingModule(wx.Panel):
         self.filt2.SetSelection(0)
         self.filt2.Bind(wx.EVT_CHOICE, self.changeFilter2)
 
-        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
-        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
-        sizer.Add(labelsh, 0, wx.LEFT|wx.TOP, 5)
-        sizer.Add(self.sh, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         sizer.Add(downlabel, 0, wx.LEFT|wx.TOP, 5)
         sizer.Add(self.down, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         sizer.Add(filt1label, 0, wx.LEFT|wx.TOP, 5)
@@ -269,20 +322,11 @@ class ResamplingModule(wx.Panel):
         sizer.Add(self.filt2, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         self.SetSizer(sizer)
 
-    def changeFreq(self, evt):
-        print(self.GetSize())
-        self.source.freq = evt.value
-
-    def changeSharp(self, evt):
-        self.source.feedback = evt.value * 0.175
-
     def resample(self, evt):
         self.factor = [-1, -2, -4, -8][evt.GetInt()]
         mode1 = self.downsig.mode
         mode2 = self.output.mode
         self.processing()
-        self.source.freq = self.fr.getValue()
-        self.source.feedback = self.sh.getValue() * 0.175
         self.downsig.mode = mode1
         self.output.mode = mode2
         wx.GetTopLevelParent(self).connectModuleToOutput()
@@ -296,9 +340,8 @@ class ResamplingModule(wx.Panel):
         self.output.mode = order
 
     def processing(self):
-        self.source = SineLoop(freq=686, mul=0.707)
-        self.blocked = DCBlock(self.source)
-        server = self.source.getServer()
+        self.blocked = DCBlock(self.inputpanel.output)
+        server = self.blocked.getServer()
         server.beginResamplingBlock(self.factor)
         self.downsig = Resample(self.blocked, mode=0)
         server.endResamplingBlock()
@@ -318,10 +361,6 @@ class QuantizeModule(wx.Panel):
     l'écoute.
 
     Contrôles:
-        Fréquence fondamentale en Hertz: 
-            Fréquence fondamentale du signal original.
-        Quantité d'harmoniques: 
-            Contrôle la quantité d'harmonique dans le signal original.
         # de bits de quantification:
             Définit le pas de quantification, entre 2 et 16 bits.
         Choisir le signal:
@@ -339,21 +378,11 @@ class QuantizeModule(wx.Panel):
 
         self.nbits = 16
 
-        labelfr = wx.StaticText(self, -1, "Fréquence fondamentale en Hz")
-        self.fr = PyoGuiControlSlider(self, 20, 5000, 187.5, log=True,
-                                      orient=wx.HORIZONTAL)
-        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
-
-        labelsh = wx.StaticText(self, -1, "Quantité d'harmoniques")
-        self.sh = PyoGuiControlSlider(self, 0, 1, 0, log=False,
-                                      orient=wx.HORIZONTAL)
-        self.sh.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-        self.sh.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSharp)
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
 
         labelbt = wx.StaticText(self, -1, "# de bits de quantification")
-        self.bt = PyoGuiControlSlider(self, 2, 16, 16, log=False, integer=False,
-                                      orient=wx.HORIZONTAL)
+        self.bt = PyoGuiControlSlider(self, 2, 16, 16, log=False)
         self.bt.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.bt.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBits)
 
@@ -370,10 +399,6 @@ class QuantizeModule(wx.Panel):
         self.dither.SetSelection(0)
         self.dither.Bind(wx.EVT_CHOICE, self.changeDither)
 
-        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
-        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
-        sizer.Add(labelsh, 0, wx.LEFT|wx.TOP, 5)
-        sizer.Add(self.sh, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         sizer.Add(labelbt, 0, wx.LEFT|wx.TOP, 5)
         sizer.Add(self.bt, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         sizer.Add(chooselabel, 0, wx.LEFT|wx.TOP, 5)
@@ -381,12 +406,6 @@ class QuantizeModule(wx.Panel):
         sizer.Add(ditherlabel, 0, wx.LEFT|wx.TOP, 5)
         sizer.Add(self.dither, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         self.SetSizer(sizer)
-
-    def changeFreq(self, evt):
-        self.source.freq = evt.value
-
-    def changeSharp(self, evt):
-        self.source.feedback = evt.value * 0.175
 
     def changeBits(self, evt):
         self.degrade.bitdepth = self.nbits = evt.value
@@ -407,30 +426,131 @@ class QuantizeModule(wx.Panel):
                          ((Noise()+Noise()+Noise()+Noise()+Noise()+Noise())/2),
                          Atone(Noise(), 2500), Tone(Noise(), 2500)]
         self.ndither = Sig(self.nsignals[0], mul=0)
-        self.source = SineLoop(freq=187.5)
-        self.blocked = DCBlock(self.source)
+        self.blocked = DCBlock(self.inputpanel.output)
         self.degrade = Degrade(self.blocked, bitdepth=16, add=self.ndither)
         self.qnoise = self.degrade - self.blocked
         self.output = InputFader(self.degrade)
 
 class FiltersModule(wx.Panel):
     """
-    Module: 01-Échantillonnage
-    --------------------------
+    Module: 01-Filtrage
+    -------------------
 
+    Ce module permet de comparer l'effet des principaux filtres sur 
+    le signal audio. En plus du choix du filtre, des contrôles sont 
+    offerts pour la fréquence de coupure (ou centrale), le facteur 
+    de qualité (Q du filtre), le gain des filtres d'égalisation et
+    l'ordre des filtres de base (passe-bas, passe-haut, passe-bande
+    et réjecteur de bande).
+    
+    Contrôles:
+        Type de filtre:
+            Permet de sélectionner le type de filtre parmi le choix
+            suivant: passe-bas, passe-haut, passe-bande, réjecteur de 
+            bande, crête/creux, dégradé passe-bas et dégradé passe-haut.
+        Fréquence de coupure/centrale:
+            Fréquence de coupure (ou centrale) du filtre en Hertz.
+        Facteur de qualité:
+            Facteur de qualité (Q) du filtre, définit comme étant
+            le rapport de la fréquence centrale sur la largeur de
+            bande (Q = f / bw).
+        Augmentation/réduction (dB):
+            Le contrôle de gain, en dB, pour les filtres d'égalisation
+            (crête/creux et dégradé).
+        Ordre du filtre:
+            L'ordre des filtres passe-bas, passe-haut, passe-bande et 
+            réjecteur de bande. L'ordre correspond au plus grand nombre 
+            d'échantillons passés utilisés par le filtre. Plus l'ordre 
+            est grand, plus le filtre peut de produire des bandes de 
+            transition abruptes.
 
     """
-    name = "02-Filtres"
+    name = "02-Filtrage"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
+        self.factor = 1
+
         self.inputpanel = InputPanel(self)
         sizer.Add(self.inputpanel, 0, wx.EXPAND)
 
+        chooselabel = wx.StaticText(self, -1, "Type de filtre")
+        choices = ["Passe-bas", "Passe-haut", "Passe-bande", 
+                   "Réjecteur de bande", "Crête/Creux (peak/notch)",
+                   "Dégradé passe-bas", "Dégradé passe-haut"]
+        self.choose = wx.Choice(self, -1, choices=choices)
+        self.choose.SetSelection(0)
+        self.choose.Bind(wx.EVT_CHOICE, self.changeFilter)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence de coupure/centrale")
+        self.fr = PyoGuiControlSlider(self, 50, 15000, 1000, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
+
+        labelq = wx.StaticText(self, -1, "Facteur de qualité")
+        self.q = PyoGuiControlSlider(self, 0.5, 10, 1, log=True)
+        self.q.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.q.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeQ)
+
+        labelbo = wx.StaticText(self, -1, "Augmentation/réduction (dB)")
+        self.bo = PyoGuiControlSlider(self, -48, 12, -6)
+        self.bo.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.bo.disable()
+        self.bo.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBoost)
+
+        orderlabel = wx.StaticText(self, -1, "Ordre du filtre")
+        choices = ["2", "4", "6", "8"]
+        self.order = wx.Choice(self, -1, choices=choices)
+        self.order.SetSelection(0)
+        self.order.Bind(wx.EVT_CHOICE, self.changeOrder)
+
+        sizer.Add(chooselabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.choose, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelq, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.q, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelbo, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.bo, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(orderlabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.order, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
         self.SetSizer(sizer)
 
+    def changeFreq(self, evt):
+        self.filter1.freq = evt.value
+        self.filter2.freq = evt.value
+
+    def changeQ(self, evt):
+        self.filter1.q = evt.value / self.factor
+        self.filter2.q = evt.value
+
+    def changeBoost(self, evt):
+        self.filter2.boost = evt.value
+
+    def changeOrder(self, evt):
+        stages = evt.GetInt() + 1
+        self.factor = rescale(stages, 1, 4, 1, 3)
+        self.filter1.stages = stages
+        self.filter1.q = self.q.getValue() / self.factor
+
+    def changeFilter(self, evt):
+        which = evt.GetInt()
+        if which <= 3:
+            self.filter1.type = which
+            self.output.interp = 0
+            self.bo.disable()
+            self.order.Enable(True)
+        else:
+            self.filter2.type = which - 4
+            self.output.interp = 1
+            self.bo.enable()
+            self.order.Enable(False)
+
     def processing(self):
-        self.output = self.inputpanel.output
+        self.filter1 = Biquadx(self.inputpanel.output, freq=1000, q=1, stages=1)
+        self.filter2 = EQ(self.inputpanel.output, freq=1000, q=1, boost=-3.00)
+        self.output = Interp(self.filter1, self.filter2, 0)
 
 MODULES = [ResamplingModule, QuantizeModule, FiltersModule]
