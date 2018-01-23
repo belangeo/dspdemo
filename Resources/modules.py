@@ -1,67 +1,10 @@
 import wx
 from pyo import *
 from .constants import *
+from .widgets import HeadTitle
 from .bandlimited import DSPDemoBLOsc
 
 class InputPanel(wx.Choicebook):
-    """
-    Section permettant de sélectionner le son source.
-        
-    Le menu déroulant permet de sélectionner le son source parmi
-    un choix de son de synthèse ou de lecture de fichier audio.
-
-    # Oscillateur anti-alias #
-
-    Oscillateur dont la quantité d'harmoniques est contrôlée
-    automatiquement afin qu'il n'y ait jamais de composantes
-    au-dessus de la fréquence de Nyquist (peu importe la 
-    fréquence fondamentale).
-
-    Contrôles:
-        Fréquence: 
-            Fréquence fondamentale du signal en Hertz.
-        Forme d'onde:
-            Interpolation entre 4 types de formes d'onde.
-            0.0 = train d'impulsions
-            0.25 = onde en dent de scie
-            0.7 = onde carrée
-            1.0 = onde triangulaire
-        Brillance:
-            Richesse spectrale du son. À 0, le signal est
-            une onde sinusoïdale tandis qu'à 1, le signal
-            contient des harmoniques jusqu'à concurences
-            de la fréquence de Nyquist.
-
-    # Fichier sonore #
-
-    Lecture d'un fichier audio mono ou stéréo (WAV ou AIFF).
-
-    Contrôles:
-        Ouvrir:
-            Bouton permettant de sélectionner le fichier son à
-            lire.
-        Jouer:
-            Démarre / arrête la lecture du son.
-        Loop:
-            Active le mode de lecture en boucle.
-        Vitesse de lecture:
-            Transposition directe (par variation de la vitesse 
-            de lecture) du son lu. Plus le son est lu lentement,
-            plus le son est grave.
-
-    # Générateur de bruit #
-
-    Différents générateurs de bruit (signaux aléatoires).
-
-    Contrôles:
-        Bruit blanc: toutes les fréquences sont présentes en
-                     proportion statistiquement égale.
-        Bruit rose: bruit blanc atténué par une pente de -3 dB
-                    par octave.
-        Bruit brun: bruit blanc atténué par une pente de -6 dB
-                    par octave.
-
-    """
     def __init__(self, parent):
         wx.Choicebook.__init__(self, parent, -1, size=(300, -1))
         self.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
@@ -294,8 +237,14 @@ class ResamplingModule(wx.Panel):
 
         self.factor = -1
 
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
         self.inputpanel = InputPanel(self)
         sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
 
         downlabel = wx.StaticText(self, -1, "Ré-échantillonnage")
         self.down = wx.Choice(self, -1, choices=["sr", "sr/2", "sr/4", "sr/8"])
@@ -378,8 +327,14 @@ class QuantizeModule(wx.Panel):
 
         self.nbits = 16
 
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
         self.inputpanel = InputPanel(self)
         sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
 
         labelbt = wx.StaticText(self, -1, "# de bits de quantification")
         self.bt = PyoGuiControlSlider(self, 2, 16, 16, log=False)
@@ -442,7 +397,7 @@ class FiltersModule(wx.Panel):
     de qualité (Q du filtre), le gain des filtres d'égalisation et
     l'ordre des filtres de base (passe-bas, passe-haut, passe-bande
     et réjecteur de bande).
-    
+
     Contrôles:
         Type de filtre:
             Permet de sélectionner le type de filtre parmi le choix
@@ -472,8 +427,14 @@ class FiltersModule(wx.Panel):
 
         self.factor = 1
 
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
         self.inputpanel = InputPanel(self)
         sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
 
         chooselabel = wx.StaticText(self, -1, "Type de filtre")
         choices = ["Passe-bas", "Passe-haut", "Passe-bande", 

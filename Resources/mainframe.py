@@ -3,8 +3,9 @@ import wx
 from wx.adv import AboutDialogInfo, AboutBox
 from pyo import *
 from .modules import *
+from .constants import *
 from .utils import audio_config, dump_func
-from .widgets import DocFrame, HeadTitle, Knob, ShowCapture
+from .widgets import DocFrame, Knob, ShowCapture
 from .images import DSPDemo_Icon_Small
 
 class MainFrame(wx.Frame):
@@ -40,8 +41,6 @@ class MainFrame(wx.Frame):
 
         leftboxup.Add(sizer1, 1, wx.LEFT|wx.RIGHT|wx.TOP|wx.EXPAND, 5)
 
-        head = HeadTitle(self.panel, "Interface du Module")
-        self.leftboxmid.Add(head, 0, wx.EXPAND|wx.ALL, 5)
         self.leftboxmid.Add(self.module, 1, wx.EXPAND|wx.ALL, 5)
 
         leftboxdown.Add(sizer2, 1, wx.ALL|wx.EXPAND, 5)
@@ -76,7 +75,10 @@ class MainFrame(wx.Frame):
         aboutItem = helpMenu.Append(wx.ID_ABOUT,
                                    'À propos de %s %s' % (APP_NAME, APP_VERSION))
         self.Bind(wx.EVT_MENU, self.onHelpAbout, aboutItem)
-        helpMenu.Append(MODULE_DOC_ID, "Documentation du module\tCtrl+I")
+        helpMenu.Append(SOURCE_DOC_ID, 
+                        "Documentation de la Source Sonore\tShift+Ctrl+I")
+        helpMenu.Bind(wx.EVT_MENU, self.onSourceDoc, id=SOURCE_DOC_ID)
+        helpMenu.Append(MODULE_DOC_ID, "Documentation du Module\tCtrl+I")
         helpMenu.Bind(wx.EVT_MENU, self.onModuleDoc, id=MODULE_DOC_ID)
         self.menubar.Append(fileMenu, "Fichier")
         self.menubar.Append(helpMenu, "Aide")
@@ -135,6 +137,9 @@ class MainFrame(wx.Frame):
 
     def onModuleDoc(self, evt):
         doc_frame = DocFrame(self, self.module.__doc__)
+
+    def onSourceDoc(self, evt):
+        src_frame = DocFrame(self, SOURCE_DOCUMENTATION)
 
     def onHelpAbout(self, evt):
         info = AboutDialogInfo()
