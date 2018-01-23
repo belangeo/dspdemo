@@ -54,7 +54,7 @@ class MainFrame(wx.Frame):
         rightbox.Add(sizer5, 1, wx.TOP|wx.RIGHT|wx.EXPAND, 5)
         rightbox.Add(sizer6, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 5)
 
-        mainsizer.Add(leftbox, 1, wx.TOP|wx.BOTTOM|wx.LEFT|wx.EXPAND, 2)
+        mainsizer.Add(leftbox, 0, wx.TOP|wx.BOTTOM|wx.LEFT|wx.EXPAND, 2)
         mainsizer.Add(rightbox, 1, wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND, 2)
         self.panel.SetSizerAndFit(mainsizer)
 
