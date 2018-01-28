@@ -109,9 +109,10 @@ class MainFrame(wx.Frame):
         self.mixoutsig = Mix(self.outsig, 2, self.outgain*self.ampscl).out()
 
     def loadInitModule(self):
-        self.module = ResamplingModule(self.panel)
+        self.module = InputOnlyModule(self.panel)
         self.module.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.module.processing()
+        wx.GetTopLevelParent(self).SetTitle("DSPDemo - " + InputOnlyModule.name)
         self.connectModuleToOutput()
 
     def loadModule(self, evt):
@@ -123,7 +124,7 @@ class MainFrame(wx.Frame):
         self.leftboxmid.Replace(oldmodule, self.module)
         oldmodule.Destroy()
         self.leftboxmid.Layout()
-        wx.GetTopLevelParent(self).SetTitle(MODULES[index].name)
+        wx.GetTopLevelParent(self).SetTitle("DSPDemo - " + MODULES[index].name)
         self.connectModuleToOutput()
 
     def connectModuleToOutput(self):

@@ -9,8 +9,9 @@ class InputPanel(wx.Choicebook):
         wx.Choicebook.__init__(self, parent, -1, size=(300, -1))
         self.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
 
-        # Oscillateur auto-modulant, Pulse-Width-Modulation
-        sources = [("Oscillateur anti-alias", self.createOscillatorPanel),
+        # Pulse-Width-Modulation
+        sources = [("Oscillateur multiforme", self.createLFOPanel),
+                   ("Oscillateur anti-alias", self.createOscillatorPanel),
                    ("Fichier sonore", self.createSoundfilePanel),
                    ("Générateur de bruit", self.createNoisePanel)]
         for source in sources:
@@ -19,6 +20,10 @@ class InputPanel(wx.Choicebook):
         self.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, self.OnPageChanged)
 
         ### Audio processing ###
+        # Multi-waveforms oscillator
+        self.lfofreq = SigTo(250, 0.05)
+        self.lfooscil = LFO(freq=self.lfofreq, sharp=0.0, type=7)
+
         # Band-limited oscillator 
         self.oscfreq = SigTo(250, 0.05)
         self.oscbright = SigTo(0.5, 0.05)
@@ -38,12 +43,54 @@ class InputPanel(wx.Choicebook):
         self.noisegenerator = InputFader(self.whitenoise)
 
         # Audio output
-        self.output = InputFader(self.oscillator)
+        self.output = InputFader(self.lfooscil)
 
     def OnPageChanged(self, evt):
         sel = evt.GetSelection()
-        obj = [self.oscillator, self.soundfile, self.noisegenerator][sel]
+        obj = [self.lfooscil, self.oscillator, self.soundfile, 
+               self.noisegenerator][sel]
         self.output.setInput(obj, 0.1)
+
+    def createLFOPanel(self):
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        choices = ["Sinusoïde", "Rampe", "Dent de scie", "Carrée", 
+                   "Triangle", "Impulsion unipolaire", "Impulsion bipolaire"]
+        wtyp = wx.Choice(panel, -1, choices=choices)
+        wtyp.SetSelection(0)
+        wtyp.Bind(wx.EVT_CHOICE, self.onLFOWaveType)
+        sizer.Add(wtyp, 0, wx.ALL|wx.EXPAND, 5)
+
+        pitbox = wx.BoxSizer(wx.VERTICAL)
+        labelpit = wx.StaticText(panel, -1, "Fréquence")
+        self.opit = PyoGuiControlSlider(panel, 20, 4000, 250, log=True)
+        self.opit.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.opit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onLFOFreq)
+        sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.opit, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        sizer.AddSpacer(5)
+        sizer.Add(wx.StaticLine(panel, size=(300, 2)))
+        sizer.AddSpacer(5)
+
+        panel.SetSizerAndFit(sizer)
+        return panel
+
+    def onLFOWaveType(self, evt):
+        realtype = [7, 0, 1, 2, 3, 4, 5][evt.GetInt()]
+        self.lfooscil.type = realtype
+        if realtype == 7:
+            self.lfooscil.sharp = 0
+        else:
+            self.lfooscil.sharp = 1
+
+    def onLFOFreq(self, evt):
+        self.lfofreq.value = evt.value
 
     def createOscillatorPanel(self):
         panel = wx.Panel(self)
@@ -192,6 +239,33 @@ class InputPanel(wx.Choicebook):
         sel = evt.GetInt()
         obj = [self.whitenoise, self.pinknoise, self.brownnoise][sel]
         self.noisegenerator.setInput(obj, 0.1)
+
+class InputOnlyModule(wx.Panel):
+    """
+    Module: 00-Sources
+    ------------------
+
+    Ce module permet d'explorer les différentes sources sonores
+    disponibles, sans traitement.
+
+    """
+    name = "00-Sources"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.factor = -1
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        self.SetSizer(sizer)
+
+    def processing(self):
+        self.output = self.inputpanel.output
 
 class ResamplingModule(wx.Panel):
     """
@@ -484,12 +558,11 @@ class FiltersModule(wx.Panel):
         self.SetSizer(sizer)
 
     def changeFreq(self, evt):
-        self.filter1.freq = evt.value
-        self.filter2.freq = evt.value
+        self.filtfreq.value = evt.value
 
     def changeQ(self, evt):
-        self.filter1.q = evt.value / self.factor
-        self.filter2.q = evt.value
+        self.filt1Q.value = evt.value / self.factor
+        self.filt2Q.value = evt.value
 
     def changeBoost(self, evt):
         self.filter2.boost = evt.value
@@ -498,7 +571,7 @@ class FiltersModule(wx.Panel):
         stages = evt.GetInt() + 1
         self.factor = rescale(stages, 1, 4, 1, 3)
         self.filter1.stages = stages
-        self.filter1.q = self.q.getValue() / self.factor
+        self.filt1Q.value = self.q.getValue() / self.factor
 
     def changeFilter(self, evt):
         which = evt.GetInt()
@@ -514,8 +587,13 @@ class FiltersModule(wx.Panel):
             self.order.Enable(False)
 
     def processing(self):
-        self.filter1 = Biquadx(self.inputpanel.output, freq=1000, q=1, stages=1)
-        self.filter2 = EQ(self.inputpanel.output, freq=1000, q=1, boost=-3.00)
+        self.filtfreq = SigTo(1000, 0.05)
+        self.filt1Q = SigTo(1, 0.05)
+        self.filt2Q = SigTo(1, 0.05)
+        self.filter1 = Biquadx(self.inputpanel.output, freq=self.filtfreq, 
+                               q=self.filt1Q, stages=1)
+        self.filter2 = EQ(self.inputpanel.output, freq=self.filtfreq, 
+                          q=self.filt2Q, boost=-3.00)
         self.output = Interp(self.filter1, self.filter2, 0)
 
-MODULES = [ResamplingModule, QuantizeModule, FiltersModule]
+MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule]
