@@ -30,6 +30,19 @@ SOURCE_DOCUMENTATION = """
     Le menu déroulant permet de sélectionner le son source parmi
     un choix de sons de synthèse ou une lecture de fichier audio.
 
+    # Oscillateur multiforme #
+
+    Oscillateur permettant de sélectionner la forme d'onde parmi
+    un choix de formes d'onde classiques.
+
+    Contrôles:
+        Menu déroulant:
+            Choix de la forme d'onde. Les choix suivants sont
+            offerts: Sinusoïde, Rampe, Dent de scie, Carrée,
+            Triangle, Impulsion unipolaire, Impulsion bipolaire.
+        Fréquence:
+            Fréquence fondamentale du signal en Hertz.
+
     # Oscillateur anti-alias #
 
     Oscillateur dont la quantité d'harmoniques est contrôlée

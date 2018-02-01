@@ -21,8 +21,6 @@ class MainFrame(wx.Frame):
 
         self.createAudioServer()
 
-        self.loadInitModule()
-
         mainsizer = wx.BoxSizer(wx.HORIZONTAL)
         leftbox = wx.BoxSizer(wx.VERTICAL)
         rightbox = wx.BoxSizer(wx.VERTICAL)
@@ -38,6 +36,8 @@ class MainFrame(wx.Frame):
         sizer2 = self.createOutputBox()
         sizer5 = self.createSpectrum()
         sizer6 = self.createScope()
+
+        self.loadInitModule()
 
         leftboxup.Add(sizer1, 1, wx.LEFT|wx.RIGHT|wx.TOP|wx.EXPAND, 5)
 
@@ -92,18 +92,20 @@ class MainFrame(wx.Frame):
         self.server.boot()
 
         # Audio vizualizers.
-        self.outgain = SigTo(0.5)
+        self.fadein = Fader(1).play()
+        self.outgain = SigTo(0.5, mul=self.fadein)
         self.outsig = Sig([0,0])
-        self.outspec = Spectrum(self.outsig, function=dump_func)
+        self.outdisp = Sig([0]*3)
+        self.outspec = Spectrum(self.outdisp, function=dump_func)
         self.outspec.function = None
-        self.outscope = Scope(self.outsig, function=dump_func)
+        self.outscope = Scope(self.outdisp, function=dump_func)
         self.outscope.function = None
         if WITH_VIDEO_CAPTURE:
             self.voicerec = Input(0, mul=1).mix(2).out()
             self.fol = Follower(self.voicerec, freq=4)
-            self.talk = self.fol > 0.025
-            self.amp = Port(self.talk, risetime=0.1, falltime=0.5)
-            self.ampscl = Scale(self.amp, outmin=1, outmax=0.2)
+            self.talk = self.fol > 0.02
+            self.amp = Port(self.talk, risetime=0.25, falltime=0.5)
+            self.ampscl = Scale(self.amp, outmin=1, outmax=0.3)
         else:
             self.ampscl = Sig(1)
         self.mixoutsig = Mix(self.outsig, 2, self.outgain*self.ampscl).out()
@@ -129,6 +131,10 @@ class MainFrame(wx.Frame):
 
     def connectModuleToOutput(self):
         self.outsig.value = self.module.output
+        self.outdisp.value = [0] * 3
+        num = len(self.module.display)
+        for i in range(num):
+            self.outdisp[i].setValue(self.module.display[i])
         
     def onQuit(self, evt):
         if self.server.getIsStarted():
@@ -149,7 +155,7 @@ class MainFrame(wx.Frame):
         if sys.platform != "darwin":
             info.SetIcon(DSPDemo_Icon_Small.GetIcon())
         info.SetCopyright("(C) 2018 Olivier Bélanger")
-        info.SetDescription("\nDSPDemo est une application conçu pour analyser "
+        info.SetDescription("\nDSPDemo est une application conçue pour analyser "
                             "et visualiser différents processus audio.\n")
         AboutBox(info, self)
 
@@ -236,6 +242,7 @@ class MainFrame(wx.Frame):
 
         self.spectrum = PyoGuiSpectrum(parent=self.panel, mscaling=1)
         self.spectrum.setAnalyzer(self.outspec)
+        self.spectrum.showChannelNames(False)
         self.zoomH = HRangeSlider(self.panel, minvalue=0, maxvalue=0.5,
                                   valtype='float', function=self.specZoom, 
                                   backColour=APP_BACKGROUND_COLOUR)
@@ -267,6 +274,7 @@ class MainFrame(wx.Frame):
 
         self.scope = PyoGuiScope(parent=self.panel)
         self.scope.setAnalyzer(self.outscope)
+        self.scope.showChannelNames(False)
 
         sizer.Add(toolbox, 0, wx.EXPAND)
         sizer.Add(self.scope, 1, wx.LEFT | wx.TOP | wx.EXPAND, 5)

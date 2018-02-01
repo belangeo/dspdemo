@@ -2,7 +2,7 @@ import wx
 from pyo import *
 from .constants import *
 from .widgets import HeadTitle
-from .bandlimited import DSPDemoBLOsc
+from .bandlimited import DSPDemoBLOsc, SchroederVerb1, SchroederVerb2
 
 class InputPanel(wx.Choicebook):
     def __init__(self, parent):
@@ -35,6 +35,7 @@ class InputPanel(wx.Choicebook):
         self.soundtable = SndTable(initchnls=2)
         self.soundfile = TableRead(self.soundtable, freq=1, loop=0, interp=4)
         self.soundcall = TrigFunc(self.soundfile["trig"][0], self.onSoundfileEnd)
+        self.soundfilemono = self.soundfile.mix()
 
         # Noise generator
         self.whitenoise = Noise()
@@ -47,7 +48,7 @@ class InputPanel(wx.Choicebook):
 
     def OnPageChanged(self, evt):
         sel = evt.GetSelection()
-        obj = [self.lfooscil, self.oscillator, self.soundfile, 
+        obj = [self.lfooscil, self.oscillator, self.soundfilemono, 
                self.noisegenerator][sel]
         self.output.setInput(obj, 0.1)
 
@@ -254,8 +255,6 @@ class InputOnlyModule(wx.Panel):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.factor = -1
-
         head = HeadTitle(self, "Source Sonore")
         sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
 
@@ -266,6 +265,7 @@ class InputOnlyModule(wx.Panel):
 
     def processing(self):
         self.output = self.inputpanel.output
+        self.display = self.output
 
 class ResamplingModule(wx.Panel):
     """
@@ -373,6 +373,7 @@ class ResamplingModule(wx.Panel):
         self.downsig = Resample(self.blocked, mode=0)
         server.endResamplingBlock()
         self.output = Resample(self.downsig, mode=0)
+        self.display = self.output
 
 class QuantizeModule(wx.Panel):
     """
@@ -463,6 +464,7 @@ class QuantizeModule(wx.Panel):
         self.degrade = Degrade(self.blocked, bitdepth=16, add=self.ndither)
         self.qnoise = self.degrade - self.blocked
         self.output = InputFader(self.degrade)
+        self.display = self.output
 
 class FiltersModule(wx.Panel):
     """
@@ -595,5 +597,505 @@ class FiltersModule(wx.Panel):
         self.filter2 = EQ(self.inputpanel.output, freq=self.filtfreq, 
                           q=self.filt2Q, boost=-3.00)
         self.output = Interp(self.filter1, self.filter2, 0)
+        self.display = self.output
 
-MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule]
+class FixedDelayModule(wx.Panel):
+    """
+    Module: 03-Délais-fixes
+    -----------------------
+
+    Ce module permet de visualiser l'effet du temps de délai lorsqu'un
+    signal original est additionné à une version délayé de lui-même. Les
+    effets obtenus sont le filtre passe-bas pour de très courts délais, 
+    toute la gamme de filtres en peigne pour des délais se situant entre
+    0.1 et 50 ms, et finalement les effets d'échos pour les temps de
+    délai plus grand que 50 ms.
+
+    Tois ondes sont affichées dans les fenêtres de visualisation:
+
+    - rouge: signal original
+    - vert: signal délayé
+    - bleu: addition du signal original et du signal délayé
+
+    Contrôles:
+        Temps de délais (ms):
+            Permet d'ajuster le temps de délai en millisecondes. La
+            valeur correspondante en échantillon est affichée en
+            dessous.
+        Réinjection en %:
+            Permet d'ajuster la proportion du signal de sortie qui
+            est réinjecté en entrée du délai (délai récursif). Plus
+            la réinjection est grande, plus les pics de résonance 
+            sont prononcés.
+
+    """
+    name = "03-Délais-fixes"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.sr = Sig(0).getSamplingRate()
+        self.one = 1 / self.sr
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labeltm = wx.StaticText(self, -1, "Temps de délai (ms)")
+        self.tm = PyoGuiControlSlider(self, self.one*1000, 100, self.one, log=True)
+        self.tm.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.tm.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeTime)
+
+        label = "Délai en échantillons: %.2f" % (self.one * self.sr)
+        self.tmsample = wx.StaticText(self, -1, label)
+
+        labelfb = wx.StaticText(self, -1, "Réinjection en %")
+        self.fb = PyoGuiControlSlider(self, 0, 99, 0, log=False)
+        self.fb.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fb.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFeed)
+
+        sizer.Add(labeltm, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.tm, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(self.tmsample, 0, wx.LEFT|wx.TOP|wx.BOTTOM, 5)
+        sizer.Add(labelfb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fb, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeTime(self, evt):
+        self.dtime.value = evt.value * 0.001
+        label = "Délai en échantillons: %.2f" % (self.dtime.value * self.sr)
+        self.tmsample.SetLabel(label)
+
+    def changeFeed(self, evt):
+        self.dfeed.value = evt.value * 0.01
+
+    def processing(self):
+        self.dtime = SigTo(self.one, 0.05)
+        self.dfeed = SigTo(0, 0.05)
+        self.delay = Delay(self.inputpanel.output, self.dtime, self.dfeed)
+        self.output = (self.inputpanel.output + self.delay) * 0.5
+        self.display = Mix([self.inputpanel.output, self.delay, self.output], voices=3)
+
+class VariableDelayModule(wx.Panel):
+    """
+    Module: 03-Délais-variables
+    ---------------------------
+
+    Ce module met en place une ligne de délai modulée à l'aide d'un
+    oscillateur sinusoïdal. Les paramètres de fréquence du LFO, 
+    de délai moyen et de profondeur de la modulation peuvent être
+    ajustés de façon à créer soit un effet de flanger ou un effet 
+    de chorus.
+
+    Valeurs typiques pour un flanger:
+
+    Fréquence du LFO: 0.1 Hz
+    Temps de délai moyen: 5 ms
+    Profondeur de la modulation: 99%
+
+    Valeurs typiques pour un chorus (varient en fonction de la source):
+
+    Fréquence du LFO: 3 Hz
+    Temps de délai moyen: 12 ms
+    Profondeur de la modulation: 5%
+
+    Contrôles:
+        Fréquence du LFO:
+            Fréquence, en Hz, de l'oscillateur modulant le temps de délai.
+        Temps de délai moyen (ms):
+            Valeur centrale du temps de délai, en ms. Le LFO fait osciller
+            le temps de délai autour de cette valeur.
+        Profondeur de la modulation (%):
+            Profondeur de la modulation autour du temps de délai moyen. À
+            0 %, le délai est fixe, à 100 %, le temps délai oscille de 0 ms 
+            à la valeur du délai moyen multiplié par 2.
+        Réinjection en %:
+            Permet d'ajuster la proportion du signal de sortie qui
+            est réinjecté en entrée du délai (délai récursif). Plus
+            la réinjection est grande, plus les pics de résonance 
+            sont prononcés.
+
+    """
+    name = "03-Délais-variables"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelpit = wx.StaticText(self, -1, "Fréquence du LFO")
+        self.opit = PyoGuiControlSlider(self, 0.01, 20, 0.1, log=True)
+        self.opit.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.opit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onLFOFreq)
+
+        labeltm = wx.StaticText(self, -1, "Temps de délai moyen (ms)")
+        self.tm = PyoGuiControlSlider(self, 2, 100, 5, log=True)
+        self.tm.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.tm.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeTime)
+
+        labeldp = wx.StaticText(self, -1, "Profondeur de la modulation (%)")
+        self.dp = PyoGuiControlSlider(self, 0, 99.5, 99.5)
+        self.dp.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.dp.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeDepth)
+
+        labelfb = wx.StaticText(self, -1, "Réinjection en %")
+        self.fb = PyoGuiControlSlider(self, 0, 99, 0, log=False)
+        self.fb.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fb.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFeed)
+
+        sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.opit, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labeltm, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.tm, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labeldp, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.dp, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fb, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def onLFOFreq(self, evt):
+        self.lfofreq.value = evt.value
+
+    def changeTime(self, evt):
+        self.dtime.value = evt.value * 0.001
+
+    def changeDepth(self, evt):
+        self.ddepth.value = evt.value * 0.01
+
+    def changeFeed(self, evt):
+        self.dfeed.value = evt.value * 0.01
+
+    def processing(self):
+        self.lfofreq = SigTo(0.1, 0.05)
+        self.lfooscil = Sine(freq=self.lfofreq)
+        self.dtime = SigTo(0.005, 0.05)
+        self.ddepth = SigTo(0.995, 0.05)
+        self.dfeed = SigTo(0, 0.05)
+        self.vtime = self.lfooscil * self.dtime * self.ddepth + self.dtime
+        self.delay = Delay(self.inputpanel.output, self.vtime, self.dfeed)
+        self.output = (self.inputpanel.output + self.delay) * 0.5
+        self.display = self.output.mix()
+
+class PhasingModule(wx.Panel):
+    """
+    Module: 03-Phasing
+    ------------------
+
+    Ce module permet d'explorer avec un effet de phasing construit à
+    l'aide de 12 filtres passe-tout d'ordre second. La différence
+    principale entre le flanger et le phaser est que dans le flanger
+    les pics d'amplitude couvre tout le spectre et sont équidistants.
+    Dans un phaser, le nombre de pics dans le spectre dépend du nombre
+    de filtres utilisés (12 dans ce cas-ci) et la répartition des
+    pics dépend de la fréquence centrale de chacun des filtres. 
+    L'algorithme utilisé dans ce module consiste en une fréquence de 
+    base (celle du premier filtre) et en un facteur d'expansion, à
+    partir duquel sont calculées les fréquences centrales de autres
+    filtres.
+
+    Contrôles:
+        Fréquence de base en Hz:
+            Fréquence centrale, en Hz, du premier filtre passe-tout.
+        Espacement des filtres:
+            Facteur d'expansion des filtres suivants. Les filtres
+            successifs ont une fréquence valant la fréquence du filtre
+            précédent, multipliée par ce facteur.
+        Réinjection en %:
+            Permet d'ajuster la proportion du signal de sortie qui
+            est réinjecté en entrée du délai (délai récursif). Plus
+            la réinjection est grande, plus les pics de résonance 
+            sont prononcés.
+
+    """
+    name = "03-Phasing"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence de base en Hz")
+        self.fr = PyoGuiControlSlider(self, 40, 1000, 100, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
+
+        labelsp = wx.StaticText(self, -1, "Espacement des filtres")
+        self.sp = PyoGuiControlSlider(self, 1.1, 4, 1.3, log=True)
+        self.sp.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.sp.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSpread)
+
+        labelfb = wx.StaticText(self, -1, "Réinjection en %")
+        self.fb = PyoGuiControlSlider(self, 0, 99, 50, log=False)
+        self.fb.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fb.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFeed)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelsp, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.sp, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fb, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeFreq(self, evt):
+        self.freq.value = evt.value
+
+    def changeSpread(self, evt):
+        self.spread.value = evt.value
+
+    def changeFeed(self, evt):
+        self.dfeed.value = evt.value * 0.01
+
+    def processing(self):
+        self.amp = Fader(fadein=1, mul=0.3).play()
+        self.freq = SigTo(100, 0.05)
+        self.spread = SigTo(1.3, 0.05)
+        self.dfeed = SigTo(0.5, 0.05)
+        self.output = Phaser(self.inputpanel.output, freq=self.freq, 
+                             spread=self.spread, q=1, 
+                             feedback=self.dfeed, num=12, mul=self.amp)
+        self.display = self.output.mix()
+
+class TransposeModule(wx.Panel):
+    """
+    Module: 03-Transposition
+    ------------------------
+
+    Ce module illustre le transposition dans le domaine temporel
+    à l'aide de deux lignes de délai supperposées dont les temps 
+    de délai varient linéairement afin de produire une transposition 
+    constante. La vitesse de déplacement du pointeur de lecture est
+    calculée en fonction de la transposition désirée, en demi-tons.
+
+    Contrôles:
+        Transposition en demi-tons:
+            Permet d'ajuster le degré de transposition appliqué à
+            la source.
+        Réinjection en %:
+            Permet d'ajuster la proportion du signal de sortie qui
+            est réinjecté en entrée du délai (délai récursif). Cela
+            a pour effet de transposer le signal transposer, en boucle.
+        Balance original/transposé:
+            Balance entre le signal original et le signal transposé.
+            0 = signal original, 1 = signal transposé, 0.5 = mélange
+            des deux.
+
+    """
+    name = "03-Transposition"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labeltr = wx.StaticText(self, -1, "Transposition en demi-tons")
+        self.tr = PyoGuiControlSlider(self, -24, 12, -7, log=False)
+        self.tr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.tr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeTranspo)
+
+        labelfb = wx.StaticText(self, -1, "Réinjection en %")
+        self.fb = PyoGuiControlSlider(self, 0, 99, 0, log=False)
+        self.fb.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fb.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFeed)
+
+        labelbl = wx.StaticText(self, -1, "Balance original/transposé")
+        self.bl = PyoGuiControlSlider(self, 0, 1, 0.5, log=False)
+        self.bl.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.bl.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBalance)
+
+        sizer.Add(labeltr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.tr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fb, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelbl, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.bl, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeTranspo(self, evt):
+        self.transpo.value = evt.value
+
+    def changeFeed(self, evt):
+        self.feed.value = evt.value * 0.01
+
+    def changeBalance(self, evt):
+        self.bal.value = evt.value
+
+    def processing(self):
+        self.amp = Fader(fadein=1).play()
+        self.transpo = SigTo(-7, 0.05)
+        self.feed = SigTo(0, 0.05)
+        self.bal = SigTo(0.5, 0.05)
+        self.harmon = Harmonizer(self.inputpanel.output, self.transpo, self.feed)
+        self.output = Interp(self.inputpanel.output, self.harmon, self.bal,
+                             mul=self.amp)
+        self.display = self.output
+
+class ReverbModule(wx.Panel):
+    """
+    Module: 03-Réverbération
+    ------------------------
+
+    Ce module présente, à des fins de comparaison, divers algorithmes
+    de réverbération numérique. Les choix sont:
+
+    Réverbérateur de Schroeder, modèle 1:
+        Algorithme utilsant quatre filtres en peigne en parallèle dont
+        la somme est passée dans deux filtres passe-tout en série.
+    Réverbérateur de Schroeder, modèle 2:
+        Algorithme utilsant quatre filtres passe-tout en série. Le signal
+        de chacun des filtres est ensuite passé dans un filtre passe-bas 
+        et la somme des signaux de sortie des filtres passe-bas constitue 
+        le signal réverbéré.
+    Freeverb:
+        Cet algorithme est une extension du modèle numéro 1 de Schroeder,
+        dévelopé par Jezar à "dreampoint" (http://www.dreampoint.co.uk).
+        Comme cet algorithme est du domaine public et très économe en
+        temps de calcul, on le retrouve très fréquemment dans le domaine
+        du logiciel libre.
+    Réseau de délais récursifs (FDN - Feedback Delai Network):
+        Ce réverbérateur numérique est constituté d'une matrice de huit
+        filtres en peigne, en couplage croisé afin d'atténuer l'effet de
+        coloration du filtre en peigne. Cet algorithme est un des plus
+        efficace pour mettre en place des temps de réverbération très longs.
+    Réverbe par convolution:
+        Le choix par excellence pour obtenir une réverbération naturelle.
+        Le signal est ici convolué avec la réponse impulsionnelle d'un lieu
+        réel. Le hic, ça coûte très cher en CPU!
+
+    Contrôles:
+        Type de réverbération:
+            Menu déroulant permettant de choisir un algorithme de 
+            réverbération.
+        Taille de la pièce:
+            Grandeur de la pièce virtuelle. En quelque sorte, ce 
+            paramètre permet de contrôler la profondeur de la 
+            réverbération. 0 = petit espace, 1 = grand espace.
+        Atténuation hautes fréquences:
+            Vitesse à laquelle les hautes fréquences sont absorbées
+            par les murs, matériaux, obstacles, etc.
+            0 = peu d'atténuation, 1 = beaucoup d'atténuation.
+        Balance original/transposé:
+            Balance entre le signal original et le signal transposé.
+            0 = signal original, 1 = signal transposé, 0.5 = mélange
+            des deux.
+
+    """
+    name = "03-Réverbération"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        typelabel = wx.StaticText(self, -1, "Type de réverbération")
+        choices = ["Schroeder modèle 1", "Schroeder modèle 2", 
+              "Freeverb", "Réseau de délais récursifs",
+              "Réverbe par convolution"]
+        type = wx.Choice(self, -1, choices=choices)
+        type.SetSelection(0)
+        type.Bind(wx.EVT_CHOICE, self.changeReverbType)
+
+        labelrz = wx.StaticText(self, -1, "Taille de la pièce")
+        self.rz = PyoGuiControlSlider(self, 0, 1, 0.5, log=False)
+        self.rz.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.rz.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRoomSize)
+
+        labelfb = wx.StaticText(self, -1, "Atténuation hautes fréquences")
+        self.fb = PyoGuiControlSlider(self, 0, 1, 0.5, log=False)
+        self.fb.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fb.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeDamping)
+
+        labelbl = wx.StaticText(self, -1, "Balance original/réverbéré")
+        self.bl = PyoGuiControlSlider(self, 0, 1, 0.25, log=False)
+        self.bl.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.bl.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBalance)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelrz, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.rz, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fb, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelbl, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.bl, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeReverbType(self, evt):
+        if evt.GetInt() == 4:
+            self.rev5.play()
+            self.rz.disable()
+            self.fb.disable()
+        else:
+            self.rev5.stop()
+            self.rz.enable()
+            self.fb.enable()
+        choices = [self.rev1.output, self.rev2.output,
+                   self.rev3, self.rev4, self.rev5]
+        self.reverb.setInput(choices[evt.GetInt()])
+
+    def changeRoomSize(self, evt):
+        self.size.value = evt.value
+
+    def changeDamping(self, evt):
+        self.damp.value = evt.value
+
+    def changeBalance(self, evt):
+        self.bal.value = evt.value
+
+    def processing(self):
+        self.size = SigTo(0.5, 0.05)
+        self.damp = SigTo(0.5, 0.05)
+        self.bal = SigTo(0.25, 0.05)
+        self.rev1 = SchroederVerb1(self.inputpanel.output, self.size, self.damp)
+        self.rev2 = SchroederVerb2(self.inputpanel.output, self.size, self.damp)
+        self.rev3 = Freeverb(self.inputpanel.output, [self.size, self.size*0.99], 
+                             [self.damp*0.99, self.damp], 1)
+        self.r4damp = Scale(self.damp, outmin=10000, outmax=500)
+        self.rev4 = WGVerb(self.inputpanel.output, [self.size, self.size*0.99], 
+                           [self.r4damp*0.99, self.r4damp], 1)
+        self.rev5 = CvlVerb(self.inputpanel.output, bal=1).stop()
+        self.reverb = InputFader(self.rev1.output)
+        self.output = Interp(self.inputpanel.output, self.reverb, self.bal)
+        self.display = self.output
+
+MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
+           FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
+           ReverbModule]

@@ -207,18 +207,51 @@ class DSPDemoBLOsc(PyoObject):
     @shape.setter
     def shape(self, x): self.setShape(x)
 
-if __name__ == "__main__":
-    # Test case...
-    s = Server().boot()
+class SchroederVerb1:
+    def __init__(self, input, size=0.5, damp=0.5):
+        self.input = input
+        self.size = SigTo(size)
+        self.damp = SigTo(damp)
+        self.sizeFactor = Scale(self.size, outmin=0.7, outmax=1.3)
+        self.dampFactor = Scale(self.damp, outmin=10000, outmax=500)
+        self.comb1 = Delay(self.input, [0.0297,0.0277], self.sizeFactor*0.65)
+        self.comb2 = Delay(self.input, [0.0371,0.0393], self.sizeFactor*0.51)
+        self.comb3 = Delay(self.input, [0.0411,0.0409], self.sizeFactor*0.5)
+        self.comb4 = Delay(self.input, [0.0137,0.0155], self.sizeFactor*0.73)
 
-    lfo = Sine(freq=0.05).range(0, 1)
-    lfo2 = Sine(freq=0.06).range(0.5, 1)
-    m = Metro(0.25).play()
-    amp = TrigEnv(m, CosTable([(0,0),(256,0.3),(7800,0.3),(8192,0)]), dur=0.25)
-    fr = TrigChoice(m, midiToHz([36,43,48,51,55,58,60]))
-    blo = BLOsc(freq=[fr,fr*1.003], bright=lfo2, shape=lfo, mul=amp).out()
+        self.combsum = self.input+self.comb1+self.comb2+self.comb3+self.comb4
 
-    sc = Scope(blo)
-    sp = Spectrum(blo)
+        self.all1 = Allpass(self.combsum, [.005,.00507], self.sizeFactor*0.75)
+        self.all2 = Allpass(self.all1, [.0117,.0123], self.sizeFactor*0.61)
+        self.output = Tone(self.all2, freq=self.dampFactor, mul=.4)
 
-    s.gui(locals())
+    def setSize(self, x):
+        self.size.value = x
+
+    def setDamp(self, x):
+        self.damp.value = x
+
+class SchroederVerb2:
+    def __init__(self, input, size=0.5, damp=0.5):
+        self.input = input
+        self.size = SigTo(size)
+        self.damp = SigTo(damp)
+        self.sizeFactor = Scale(self.size, outmin=0.5, outmax=1.5)
+        self.dampFactor = Scale(self.damp, outmin=1.75, outmax=0.25)
+        self.b1 = Allpass(self.input, [.0204,.02011], self.sizeFactor*0.35)
+        self.b2 = Allpass(self.b1, [.06653,.06641], self.sizeFactor*0.41)
+        self.b3 = Allpass(self.b2, [.035007,.03504], self.sizeFactor*0.5)
+        self.b4 = Allpass(self.b3, [.023021 ,.022987], self.sizeFactor*0.65)
+
+        self.c1 = Tone(self.b1, self.dampFactor*5000, mul=0.7)
+        self.c2 = Tone(self.b2, self.dampFactor*3000, mul=0.7)
+        self.c3 = Tone(self.b3, self.dampFactor*1500, mul=0.7)
+        self.c4 = Tone(self.b4, self.dampFactor*500, mul=0.7)
+
+        self.output = self.c1+self.c2+self.c3+self.c4
+
+    def setSize(self, x):
+        self.size.value = x
+
+    def setDamp(self, x):
+        self.damp.value = x
