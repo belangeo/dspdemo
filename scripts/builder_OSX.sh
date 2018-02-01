@@ -5,8 +5,8 @@
 # Olivier Belanger, 2018
 #####################################
 
-export DMG_DIR="DSPDemo 0.0.3"
-export DMG_NAME="DSPDemo_0.0.3.dmg"
+export DMG_DIR="DSPDemo 0.0.4"
+export DMG_NAME="DSPDemo_0.0.4.dmg"
 
 python3.6 setup.py py2app --plist=scripts/info.plist
 

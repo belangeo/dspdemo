@@ -1,5 +1,5 @@
 APP_NAME = 'DSPDemo'
-APP_VERSION = '0.0.3'
+APP_VERSION = '0.0.4'
 APP_COPYRIGHT = 'Olivier Bélanger, 2018'
 
 WITH_VIDEO_CAPTURE = False
