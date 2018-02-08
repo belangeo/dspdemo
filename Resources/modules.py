@@ -1096,6 +1096,167 @@ class ReverbModule(wx.Panel):
         self.output = Interp(self.inputpanel.output, self.reverb, self.bal)
         self.display = self.output
 
+class PanningModule(wx.Panel):
+    """
+    Module: 04-Panoramisation
+    -------------------------
+
+    Ce module permet de comparer trois différents algorithmes de
+    panoramisation. 
+
+    - Linéaire:
+        Le moins coûteux en temps de calcul, l'intensité totale
+        est réduite de 6 dB au centre par rapport aux extrémités.
+    - Sinus/cosinus:
+        Le gain pour chaque haut-parleur est calculé à partir de
+        fonction cosinus (pour le canal de gauche) et sinus (pour
+        le canal de droite). L'intensité totale est toujours de
+        1, peu importe la position de la source. Cet algorithme
+        est plus coûteux en temps de calcul.
+    - Racine carrée:
+        Cet algorithme est un compromis entre les deux précédents
+        en ce qui a trait au temps de calcul (plus coûteux que
+        la panoramisation linéaire mais moins que sinus/cosinus)
+        tout en conservant une intensité totale de 1 sur tout 
+        l'arc de panoramisation. Par contre, la courbe est un peu
+        abrupte aux extrémités (proche de 0 ou de 1).
+
+    Contrôles:
+        Algorithme de panoramisation:
+            Permet de choisir l'algorithme de panoramisation.
+        Pan gauche - droite:
+            Position du signal sur l'axe gauche - droite.
+            0 = complètement à gauche, 1 = complètement à droite.
+
+    """
+    name = "04-Panoramisation"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        typelabel = wx.StaticText(self, -1, "Algorithme de panoramisation")
+        choices = ["Linéaire", "Sinus/cosinus", "Racine carrée"]
+        type = wx.Choice(self, -1, choices=choices)
+        type.SetSelection(0)
+        type.Bind(wx.EVT_CHOICE, self.changePanType)
+
+        labelpn = wx.StaticText(self, -1, "Pan gauche - droite")
+        self.pn = PyoGuiControlSlider(self, 0, 1, 0.5, log=False)
+        self.pn.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.pn.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePan)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelpn, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.pn, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changePanType(self, evt):
+        choices = [self.pan1, self.pan2, self.pan3]
+        self.output.setInput(choices[evt.GetInt()])
+
+    def changePan(self, evt):
+        self.pan.value = evt.value
+
+    def processing(self):
+        self.pan = SigTo(0.5, 0.5)
+        self.pan1 = Sig(self.inputpanel.output, mul=[1 - self.pan, self.pan])
+        self.pan2 = Pan(self.inputpanel.output, pan=self.pan)
+        self.pan3 = Sig(self.inputpanel.output, 
+                        mul=[Sqrt(1 - self.pan), Sqrt(self.pan)])
+        self.output = InputFader(self.pan1)
+        self.display = self.output
+
+class HRTFModule(wx.Panel):
+    """
+    Module: 04-HRTF Spatialisation 3D
+    ---------------------------------
+
+    Ce module permet d'expérimenter avec la panoramisation 3D en
+    stéréo avec l'algorithme HRTF (Head-Related Transfert Function).
+    Les réponses impulsionnelles proviennent de Gardner et Martin
+    du MIT Media Lab:
+
+    http://alumni.media.mit.edu/~kdm/hrtfdoc/hrtfdoc.html
+
+    On contrôle la position de la source est spécifiant ses 
+    coordonnées en azimuth et en élévation.
+
+    Cet algorithme utilise une banque de filtres pré-enregistrés
+    pour simuler les effets spectraux de la tête, des oreilles et
+    des épaules sur la perception du son. Observez, avec un bruit
+    blanc par exemple, comme le spectre de la source change lorsque
+    la position change. Pour entendre l'effet HRTF, il est préférable
+    d'en faire l'écoute aux écouteurs!
+
+    Contrôles:
+        Position en azimuth:
+            Contrôle la position de la source en azimuth (plan 
+            horizontal). La position est donnée en degrés, entre
+            -180 et 180 degrés. -90 signifie que le son est 
+            complètement à gauche et à 90 degrés, le son est
+            complètement à droite.
+        Position en élévation:
+            Contrôle la position de la source en élévation (plan 
+            vertical). La position est donnée en degrés, entre
+            -40 et 90 degrés. 0 degrés signifie que le son est
+            au niveau des oreilles et à 90 degrés, le son est
+            au dessus de la tête.
+
+    """
+    name = "04-HRTF Spatialisation 3D"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelaz = wx.StaticText(self, -1, "Position en azimuth")
+        self.az = PyoGuiControlSlider(self, -180, 180, 0.0, log=False)
+        self.az.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.az.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeAzimuth)
+
+        labelel = wx.StaticText(self, -1, "Position en élévation")
+        self.el = PyoGuiControlSlider(self, -40, 90, 0.0, log=False)
+        self.el.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.el.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeElevation)
+
+        sizer.Add(labelaz, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.az, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.el, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeAzimuth(self, evt):
+        self.azimuth.value = evt.value
+
+    def changeElevation(self, evt):
+        self.elevation.value = evt.value
+
+    def processing(self):
+        self.azimuth = SigTo(0.0, 0.5)
+        self.elevation = SigTo(0.0, 0.5)
+        self.output = HRTF(self.inputpanel.output, self.azimuth, self.elevation)
+        self.display = self.output
+
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
-           ReverbModule]
+           ReverbModule, PanningModule, HRTFModule]
