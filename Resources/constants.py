@@ -1,6 +1,17 @@
+import os, sys
+
 APP_NAME = 'DSPDemo'
 APP_VERSION = '0.0.5'
 APP_COPYRIGHT = 'Olivier Bélanger, 2018'
+
+if '/%s.app' % APP_NAME in os.getcwd():
+    RESOURCES_PATH = os.getcwd()
+    os.environ["LANG"] = "en_CA.UTF-8"
+else:
+    RESOURCES_PATH = os.path.join(os.getcwd(), 'Resources')
+
+if not os.path.isdir(RESOURCES_PATH) and sys.platform == "win32":
+    RESOURCES_PATH = os.path.join(os.getenv("ProgramFiles"), "DSPDemo", "Resources")
 
 WITH_VIDEO_CAPTURE = False
 

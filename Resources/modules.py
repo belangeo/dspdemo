@@ -1,3 +1,4 @@
+import os
 import wx
 from pyo import *
 from .constants import *
@@ -1252,9 +1253,11 @@ class HRTFModule(wx.Panel):
         self.elevation.value = evt.value
 
     def processing(self):
-        self.azimuth = SigTo(0.0, 0.5)
-        self.elevation = SigTo(0.0, 0.5)
-        self.output = HRTF(self.inputpanel.output, self.azimuth, self.elevation)
+        self.hrtfdata = HRTFData(os.path.join(RESOURCES_PATH, "hrtf_compact"))
+        self.azimuth = SigTo(0.0, 0.05)
+        self.elevation = SigTo(0.0, 0.05)
+        self.output = HRTF(self.inputpanel.output, self.azimuth, self.elevation,
+                           self.hrtfdata)
         self.display = self.output
 
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
