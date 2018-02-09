@@ -1170,7 +1170,7 @@ class PanningModule(wx.Panel):
         self.pan.value = evt.value
 
     def processing(self):
-        self.pan = SigTo(0.5, 0.5)
+        self.pan = SigTo(0.5, 0.05)
         self.pan1 = Sig(self.inputpanel.output, mul=[1 - self.pan, self.pan])
         self.pan2 = Pan(self.inputpanel.output, pan=self.pan)
         self.pan3 = Sig(self.inputpanel.output, 
