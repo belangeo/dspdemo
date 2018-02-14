@@ -1092,7 +1092,8 @@ class ReverbModule(wx.Panel):
         self.r4damp = Scale(self.damp, outmin=10000, outmax=500)
         self.rev4 = WGVerb(self.inputpanel.output, [self.size, self.size*0.99], 
                            [self.r4damp*0.99, self.r4damp], 1)
-        self.rev5 = CvlVerb(self.inputpanel.output, bal=1).stop()
+        impulse = os.path.join(RESOURCES_PATH, "IRMediumHallStereo.wav")
+        self.rev5 = CvlVerb(self.inputpanel.output, impulse=impulse, bal=1).stop()
         self.reverb = InputFader(self.rev1.output)
         self.output = Interp(self.inputpanel.output, self.reverb, self.bal)
         self.display = self.output
