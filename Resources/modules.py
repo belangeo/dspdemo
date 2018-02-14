@@ -2,7 +2,7 @@ import os
 import wx
 from pyo import *
 from .constants import *
-from .widgets import HeadTitle
+from .widgets import HeadTitle, LabelKnob
 from .bandlimited import DSPDemoBLOsc, SchroederVerb1, SchroederVerb2
 
 class InputPanel(wx.Choicebook):
@@ -1260,6 +1260,366 @@ class HRTFModule(wx.Panel):
                            self.hrtfdata)
         self.display = self.output
 
+class PeakRMSModule(wx.Panel):
+    """
+    Module: 05-Valeur crête vs RMS
+    ------------------------------
+
+    Ce module illustre la différence entre la valeur crête (peak)
+    et la valeur efficace (RMS).
+
+    L'oscilloscope affiche le signal en rouge ainsi que ses valeurs
+    crête et RMS en vert et bleu respectivement.
+
+    """
+    name = "05-Valeur crête vs RMS"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        label1 = wx.StaticText(self, -1, "Signal source en rouge.")
+        self.label2 = wx.StaticText(self, -1, "Valeur crête en vert. 0.000")
+        self.label3 = wx.StaticText(self, -1, "Valeur RMS en bleu. 0.000")
+
+        sizer.Add(label1, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.label2, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.label3, 0, wx.LEFT|wx.TOP, 5)
+
+        self.SetSizer(sizer)
+
+    def getPeakValues(self, *args):
+        wx.CallAfter(self.label2.SetLabel, "Valeur crête en vert. %.3f" % args[0])
+
+    def getRMSValues(self, *args):
+        wx.CallAfter(self.label3.SetLabel, "Valeur RMS en bleu. %.3f" % args[0])
+
+    def processing(self):
+        server = Sig(0).getServer()
+        dur = server.getBufferSize() / server.getSamplingRate()
+        self.peak = PeakAmp(self.inputpanel.output, self.getPeakValues)
+        self.rms = RMS(self.inputpanel.output, self.getRMSValues)
+        self.output = self.inputpanel.output
+        self.disp = [self.output, SigTo(self.peak, dur), SigTo(self.rms, dur)]
+        self.display = Mix(self.disp, voices=3)
+
+class EnvFollowerModule(wx.Panel):
+    """
+    Module: 05-Suivi d'enveloppe
+    ----------------------------
+
+    Ce module illustre le suivi d'enveloppe d'amplitude. La source 
+    est d'abord analysée puis son suivi d'amplitude est utilisé pour
+    contrôler l'amplitude d'un bruit rose en accompagnement.
+
+    Le suivi d'enveloppe est effectué à l'aide d'une rectification
+    positive de l'onde puis d'un filtrage passe-bas. La fréquence
+    du filtre passe-bas permet de contrôler la réactivité du suiveur.
+
+    Contrôles:
+        Fréq. du filtre passe-bas en Hz:
+            Contrôle la fréquence du filtre appliqué au signal rectifié.
+            Plus la fréquence est grave, plus le lissage est prononcé
+            et moins les petites variations d'amplitude seront perceptibles.
+
+    """
+    name = "05-Suivi d'enveloppe"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelfr = wx.StaticText(self, -1, "Fréq. du filtre passe-bas en Hz")
+        self.fr = PyoGuiControlSlider(self, 0.1, 100, 10.0, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeFreq(self, evt):
+        self.freq.value = evt.value
+
+    def processing(self):
+        self.freq = SigTo(10, 0.05)
+        self.amp = Follower(self.inputpanel.output, self.freq)
+        self.new = PinkNoise(self.amp)
+        self.output = Mix([self.inputpanel.output, self.new], voices=2)
+        self.display = self.output
+
+class GateModule(wx.Panel):
+    """
+    Module: 05-Porte de bruit
+    -------------------------
+
+    Ce module permet d'expérimenter avec la porte de bruit.
+
+    Lorsque le suivi d'amplitude du signal passe sous le seuil spécifé,
+    l'amplitude descend à zéro à une vitesse donnée par le temps de 
+    relâche. Lorsqu'il remonte au-dessus du seuil, l'amplitude retourne
+    à 1 à une vitesse donnée par le temps d'attaque.
+
+    Contrôles:
+        Seuil en dB:
+            Seuil, en décibels, au-dessous duquel l'amplitude du signal
+            est brsquement rammenée à 0.
+        Temps d'attaque en seconde:
+            Durée, en seconde, que prend l'amplitude pour retourner à
+            1 lorsque le suivi d'amplitude passe au-dessus du seuil.
+        Temps de relâche en seconde:
+            Durée, en seconde, que prend l'amplitude pour descendre à
+            0 lorsque le suivi d'amplitude passe en dessous du seuil.
+
+    """
+    name = "05-Porte de bruit"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelth = wx.StaticText(self, -1, "Seuil en dB")
+        self.th = PyoGuiControlSlider(self, -70, 0, -50.0)
+        self.th.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.th.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeThresh)
+
+        labelri = wx.StaticText(self, -1, "Temps d'attaque en seconde")
+        self.ri = PyoGuiControlSlider(self, 0.0001, 0.25, 0.01, log=True)
+        self.ri.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.ri.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRise)
+
+        labelfa = wx.StaticText(self, -1, "Temps de relâche en seconde")
+        self.fa = PyoGuiControlSlider(self, 0.0001, 0.25, 0.05, log=True)
+        self.fa.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fa.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFall)
+
+        sizer.Add(labelth, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.th, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelri, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.ri, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfa, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fa, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeThresh(self, evt):
+        self.thresh.value = evt.value
+
+    def changeRise(self, evt):
+        self.rise.value = evt.value
+
+    def changeFall(self, evt):
+        self.fall.value = evt.value
+
+    def processing(self):
+        self.thresh = SigTo(-50, 0.05)
+        self.rise = SigTo(0.01, 0.05)
+        self.fall = SigTo(0.05, 0.05)
+        self.output = Gate(self.inputpanel.output, self.thresh, self.rise,
+                           self.fall)
+        self.display = self.output
+
+class CompressModule(wx.Panel):
+    """
+    Module: 05-Compresseur
+    -----------------------
+
+    Ce module permet d'expérimenter avec le compresseur.
+
+    Lorsque le suivi d'amplitude du signal passe au-dessus du seuil spécifé,
+    le signal est compressé en fonction du ratio de compression. Lorsque le
+    suivi d'amplitude est sous le seuil, le signal passe sans modification.
+
+    Avec un seuil près de 0 dB et un ratio très élevé (entre 50 et 100), le
+    compresseur agit comme un limiteur.
+
+    Contrôles:
+        Seuil en dB:
+            Seuil, en décibels, au-dessus duquel le signal est compressé.
+        Ratio de compression:
+            Rapport entre le gain du signal en entré et en sortie du 
+            compresseur. Un ratio de 2 signifie que pour 2 décibels
+            au-dessus du seuil en entrée, l'amplitude du signal en sortie
+            sera de seulement 1 décibel au-dessus du seuil. 
+        Temps d'attaque en seconde:
+            Durée, en seconde, que prend le compresseur pour atteindre son
+            plein niveau de compression lorsque le suivi d'amplitude passe
+            au-dessus du seuil.
+        Temps de relâche en seconde:
+            Durée, en seconde, que prend le compresseur pour arrêter de 
+            compresser lorsque le suivi d'amplitude passe au-dessous du 
+            seuil.
+
+    """
+    name = "05-Compresseur"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelth = wx.StaticText(self, -1, "Seuil en dB")
+        self.th = PyoGuiControlSlider(self, -70, 0, -50.0)
+        self.th.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.th.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeThresh)
+
+        labelrt = wx.StaticText(self, -1, "Ratio de compression")
+        self.rt = PyoGuiControlSlider(self, 1, 100, 4, log=True)
+        self.rt.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.rt.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRatio)
+
+        labelri = wx.StaticText(self, -1, "Temps d'attaque en seconde")
+        self.ri = PyoGuiControlSlider(self, 0.0001, 0.25, 0.01, log=True)
+        self.ri.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.ri.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRise)
+
+        labelfa = wx.StaticText(self, -1, "Temps de relâche en seconde")
+        self.fa = PyoGuiControlSlider(self, 0.0001, 0.25, 0.05, log=True)
+        self.fa.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fa.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFall)
+
+        labelga = wx.StaticText(self, -1, "Gain post-compresseur")
+        self.ga = PyoGuiControlSlider(self, 0, 24, 0)
+        self.ga.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.ga.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeGain)
+
+        sizer.Add(labelth, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.th, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelrt, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.rt, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelri, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.ri, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfa, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fa, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelga, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.ga, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeThresh(self, evt):
+        self.thresh.value = evt.value
+
+    def changeRatio(self, evt):
+        self.ratio.value = evt.value
+
+    def changeRise(self, evt):
+        self.rise.value = evt.value
+
+    def changeFall(self, evt):
+        self.fall.value = evt.value
+
+    def changeGain(self, evt):
+        self.gain.value = evt.value
+
+    def processing(self):
+        self.thresh = SigTo(-50, 0.05)
+        self.ratio = SigTo(4, 0.05)
+        self.rise = SigTo(0.01, 0.05)
+        self.fall = SigTo(0.05, 0.05)
+        self.gain = SigTo(0, 0.05)
+        self.output = Compress(self.inputpanel.output, self.thresh, self.ratio,
+                               self.rise, self.fall, mul=DBToA(self.gain))
+        self.display = self.output
+
+class MBCompressModule(wx.Panel):
+    """
+    Module: 05-Compresseur Multi-Bande
+    ----------------------------------
+
+    Ce module permet d'expérimenter avec la panoramisation 3D en
+
+    Contrôles:
+        Position en azimuth:
+            Contrôle la position de la source en azimuth (plan 
+            horizontal). La position est donnée en degrés, entre
+            -180 et 180 degrés. -90 signifie que le son est 
+            complètement à gauche et à 90 degrés, le son est
+            complètement à droite.
+        Position en élévation:
+            Contrôle la position de la source en élévation (plan 
+            vertical). La position est donnée en degrés, entre
+            -40 et 90 degrés. 0 degrés signifie que le son est
+            au niveau des oreilles et à 90 degrés, le son est
+            au dessus de la tête.
+
+    """
+    name = "05-Compresseur Multi-Bande"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        box2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.th2 = LabelKnob(self, "seuil", mini=-40, maxi=0, init=-20)
+        self.rt2 = LabelKnob(self, "ratio", mini=1, maxi=20, init=1)
+        self.ri2 = LabelKnob(self, "rise", mini=0.001, maxi=0.2, init=0.01)
+        self.fa2 = LabelKnob(self, "fall", mini=0.005, maxi=0.5, init=0.1)
+        self.bo2 = LabelKnob(self, "gain", mini=-24, maxi=24, init=0)
+        box2.AddMany([(self.th2, 1), (self.rt2, 1), (self.ri2, 1), (self.fa2, 1), (self.bo2, 1)])
+
+        sizer.Add(box2, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.SetSizer(sizer)
+
+    def changeThresh1(self, evt):
+        self.thresh1.value = evt.value
+
+    def changeRatio1(self, evt):
+        self.ratio1.value = evt.value
+
+    def changeBoost1(self, evt):
+        self.boost1.value = evt.value
+
+    def processing(self):
+        self.split = FourBand(self.inputpanel.output, freq1=150, freq2=600, freq3=3200)
+        self.thresh1 = SigTo(-20, 0.05)
+        self.ratio1 = SigTo(1, 0.05)
+        self.boost1 = SigTo(0, 0.05)
+        self.gain1 = DBToA(self.boost1)
+        self.output = Compress(self.split, thresh=self.thresh1, ratio=self.ratio1, knee=0.5, mul=self.gain1).mix(1)
+        self.display = self.output
+
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
-           ReverbModule, PanningModule, HRTFModule]
+           ReverbModule, PanningModule, HRTFModule, PeakRMSModule, 
+           EnvFollowerModule, GateModule, CompressModule]
