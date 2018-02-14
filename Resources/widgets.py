@@ -50,6 +50,9 @@ class Knob(wx.Panel):
         self.diff = 0
         self.inc = 0.005
 
+    def setValue(self, val):
+        self.value = self.tempval = val
+
     def OnLeftDown(self, evt):
         self.startpos = evt.GetPosition()
         if evt.ShiftDown():
@@ -104,6 +107,77 @@ class Knob(wx.Panel):
 
         if self.outFunction is not None:
             self.outFunction(self.tempval)
+
+def interpFloat(t, v1, v2):
+    "interpolator for a single value; interprets t in [0-1] between v1 and v2"
+    return (v2 - v1) * t + v1
+
+def tFromValue(value, v1, v2):
+    "returns a t (in range 0-1) given a value in the range v1 to v2"
+    if (v2 - v1) == 0:
+        return 1.0
+    else:
+        return float(value - v1) / (v2 - v1)
+
+def clamp(v, minv, maxv):
+    "clamps a value within a range"
+    if v < minv: v = minv
+    if v > maxv: v = maxv
+    return v
+
+def toLog(t, v1, v2):
+    return math.log10(t / v1) / math.log10(v2 / v1)
+
+def toExp(t, v1, v2):
+    return math.pow(10, t * (math.log10(v2) - math.log10(v1)) + math.log10(v1))
+
+class LabelKnob(wx.Panel):
+    def __init__(self, parent, label="", size=(60, 60), mini=0, maxi=1, init=0, 
+                 log=False, outFunction=None):
+        wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=size)
+        self.mini = mini
+        self.maxi = maxi
+        self.init = init
+        self.log = log
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        font, pts = self.GetFont(), self.GetFont().GetPointSize()
+        font.SetPointSize(pts-2)
+        label = wx.StaticText(self, -1, label)
+        label.SetFont(font)
+        sizer.Add(label, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.knob = Knob(self, outFunction=self.knobOutput)
+        self.knob.setValue(tFromValue(self.init, self.mini, self.maxi))
+        sizer.Add(self.knob, 1, wx.LEFT|wx.RIGHT, 10)
+        self.display = wx.StaticText(self, -1, "0.000")
+        self.display.SetFont(font)
+        sizer.Add(self.display, 0, wx.EXPAND|wx.CENTER|wx.ALL, 5)
+        self.SetSizerAndFit(sizer)
+
+    def knobOutput(self, value):
+        if self.log:
+            val = toExp(value, self.mini, self.maxi)
+        else:
+            val = interpFloat(value, self.mini, self.maxi)
+
+        if abs(val) >= 1000:
+            val = '%.0f' % val
+        elif abs(val) >= 100:
+            if val < 0:
+                val = '%.0f' % val
+            else:
+                val = '%.1f' % val
+        elif abs(val) >= 10:
+            if val < 0:
+                val = '%.1f' % val
+            else:
+                val = '%.2f' % val
+        elif abs(val) < 10:
+            if val < 0:
+                val = '%.2f' % val
+            else:
+                val = '%.3f' % val
+
+        self.display.SetLabel(val)
 
 if FOUND_CV2:
     capture = cv2.VideoCapture(0)
