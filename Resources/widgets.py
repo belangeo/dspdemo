@@ -133,24 +133,29 @@ def toExp(t, v1, v2):
 
 class LabelKnob(wx.Panel):
     def __init__(self, parent, label="", size=(60, 60), mini=0, maxi=1, init=0, 
-                 log=False, outFunction=None):
+                 log=False, integer=False, outFunction=None):
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=size)
         self.mini = mini
         self.maxi = maxi
         self.init = init
         self.log = log
+        self.integer = integer
+        self.outFunction = outFunction
         sizer = wx.BoxSizer(wx.VERTICAL)
         font, pts = self.GetFont(), self.GetFont().GetPointSize()
         font.SetPointSize(pts-2)
         label = wx.StaticText(self, -1, label)
         label.SetFont(font)
-        sizer.Add(label, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        sizer.Add(label, 0, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL|wx.LEFT, 5)
         self.knob = Knob(self, outFunction=self.knobOutput)
-        self.knob.setValue(tFromValue(self.init, self.mini, self.maxi))
+        if self.log:
+            self.knob.setValue(toLog(self.init, self.mini, self.maxi))
+        else:
+            self.knob.setValue(tFromValue(self.init, self.mini, self.maxi))
         sizer.Add(self.knob, 1, wx.LEFT|wx.RIGHT, 10)
         self.display = wx.StaticText(self, -1, "0.000")
         self.display.SetFont(font)
-        sizer.Add(self.display, 0, wx.EXPAND|wx.CENTER|wx.ALL, 5)
+        sizer.Add(self.display, 0, wx.EXPAND|wx.CENTER|wx.LEFT|wx.RIGHT, 5)
         self.SetSizerAndFit(sizer)
 
     def knobOutput(self, value):
@@ -158,26 +163,51 @@ class LabelKnob(wx.Panel):
             val = toExp(value, self.mini, self.maxi)
         else:
             val = interpFloat(value, self.mini, self.maxi)
+        realvalue = val
 
-        if abs(val) >= 1000:
-            val = '%.0f' % val
-        elif abs(val) >= 100:
-            if val < 0:
+        if self.integer:
+            if abs(val) >= 10000:
+                val = '%d' % val
+            elif abs(val) >= 100:
+                if val < 0:
+                    val = '%d' % val
+                else:
+                    val = '% 1d' % val
+            elif abs(val) >= 10:
+                if val < 0:
+                    val = '% 1d' % val
+                else:
+                    val = '% 2d' % val
+            elif abs(val) < 10:
+                if val < 0:
+                    val = '% 2d' % val
+                else:
+                    val = '% 3d' % val
+
+        else:
+            if abs(val) >= 1000:
                 val = '%.0f' % val
-            else:
-                val = '%.1f' % val
-        elif abs(val) >= 10:
-            if val < 0:
-                val = '%.1f' % val
-            else:
-                val = '%.2f' % val
-        elif abs(val) < 10:
-            if val < 0:
-                val = '%.2f' % val
-            else:
-                val = '%.3f' % val
+            elif abs(val) >= 100:
+                if val < 0:
+                    val = '%.0f' % val
+                else:
+                    val = '%.1f' % val
+            elif abs(val) >= 10:
+                if val < 0:
+                    val = '%.1f' % val
+                else:
+                    val = '%.2f' % val
+            elif abs(val) < 10:
+                if val < 0:
+                    val = '%.2f' % val
+                else:
+                    val = '%.3f' % val
 
         self.display.SetLabel(val)
+        if self.outFunction is not None:
+            if self.integer:
+                realvalue = int(realvalue)
+            self.outFunction(realvalue)
 
 if FOUND_CV2:
     capture = cv2.VideoCapture(0)

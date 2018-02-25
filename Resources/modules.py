@@ -3,7 +3,7 @@ import wx
 from pyo import *
 from .constants import *
 from .widgets import HeadTitle, LabelKnob
-from .bandlimited import DSPDemoBLOsc, SchroederVerb1, SchroederVerb2
+from .bandlimited import DSPDemoBLOsc, SchroederVerb1, SchroederVerb2, AdditiveSynthesis, TriTable, PWM, OscSync
 
 class InputPanel(wx.Choicebook):
     def __init__(self, parent):
@@ -1620,7 +1620,612 @@ class MBCompressModule(wx.Panel):
         self.output = Compress(self.split, thresh=self.thresh1, ratio=self.ratio1, knee=0.5, mul=self.gain1).mix(1)
         self.display = self.output
 
+class AddSynthFixModule(wx.Panel):
+    """
+    Module: 06-Sommation de sinusoïdes
+    ----------------------------------
+
+    Ce module permet de construire graduellement des formes d'onde
+    en dent de scie, carrée et triangulaire par sommation d'ondes
+    sinusoïdales. 
+
+    Dent de scie: 
+        Constituée de toutes les harmoniques. L'amplitude de chacune 
+        des harmoniques est l'inverse de son rang, A(n) = 1 / n.
+    Onde carrée: 
+        Constituée uniquement des harmoniques impaires. L'amplitude
+        de chacune des harmoniques est l'inverse de son rang, A(n) = 1 / n.
+    Onde triangulaire: 
+        Constituée uniquement des harmoniques impaires. L'amplitude
+        de chacune des harmoniques est l'inverse de son rang au carrée, 
+        A(n) = 1 / (n*n). Dans le cas de l'onde triangulaire, chaque
+        deuxième harmonique est inversée en phase.
+
+    Contrôles:
+        Forme d'onde:
+            Choix de la forme d'onde à construire. Les choix sont:
+            Dent de scie, Onde carrée et Onde triangulaire.
+        Fréquence fondamentale:
+            Fréquence, en Hertz, de l'oscillateur qui lit la forme d'onde.
+        Nombre d'harmoniques:
+            Détermine de combien de composantes est constituée la forme
+            d'onde. Plus le nombre est élevé, plus la forme est précise.
+    """
+    name = "06-Sommation de sinusoïdes"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.which = 0
+        self.order = 10
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        typelabel = wx.StaticText(self, -1, "Forme d'onde")
+        choices = ["Dent de scie", "Onde carrée", "Onde triangulaire"]
+        type = wx.Choice(self, -1, choices=choices)
+        type.SetSelection(0)
+        type.Bind(wx.EVT_CHOICE, self.changeWaveType)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence fondamentale")
+        self.fr = PyoGuiControlSlider(self, 40, 4000, 250, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
+
+        labelhr = wx.StaticText(self, -1, "Nombre d'harmoniques")
+        self.hr = PyoGuiControlSlider(self, 1, 50, 10, integer=True)
+        self.hr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.hr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeHarms)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelhr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.hr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeWaveType(self, evt):
+        self.which = evt.GetInt()
+        if self.which == 0:
+            self.output.table = self.sawtable
+        elif self.which == 1:
+            self.output.table = self.sqrtable
+        elif self.which == 2:
+            self.output.table = self.tritable
+        self.output.table.order = self.order
+        self.output.table.normalize()
+
+    def changeHarms(self, evt):
+        self.order = int(evt.value)
+        self.output.table.order = self.order
+        self.output.table.normalize()
+
+    def changeFreq(self, evt):
+        self.freq.value = evt.value
+
+    def processing(self):
+        self.freq = SigTo(250, 0.05)
+        self.sawtable = SawTable(10)
+        self.sqrtable = SquareTable(10)
+        self.tritable = TriTable(10)
+        self.output = Osc(self.sawtable, self.freq, mul=0.707)
+        self.display = self.output
+
+class AddSynthVarModule(wx.Panel):
+    """
+    Module: 06-Synthèse Additive
+    ----------------------------
+
+    Ce module permet d'expérimenter avec certains algorithmes de réduction
+    de données dans un contexte de synthèse additive à forme d'onde variable.
+    Ce module permet de générer un palette très large de timbres, explorez
+    différentes combinaisons de paramètres.
+
+    Contrôles:
+        Nombre de partiels:
+            Détermine le nombre d'oscillateurs composant le signal sonore.
+        Env. att - dec - sus - rel:
+            Enveloppe d'amplitude de type ADSR (Attack, Decay, Sustain, Release).
+            att: Durée, en millisecondes, de la phase ascendante de l'enveloppe.
+            dec: Durée, en millisecondes, de la phase d'atténuation suivant la
+                 phase d'attaque.
+            sus: Valeur d'amplitude de la tenue de l'enveloppe.
+            rel: Durée, en milliseconde, de la relâche, c'est-à-dire le retour
+                 à zéro de l'enveloppe.
+        Réduction amp:
+            Facteur de réduction d'une série de puissance permettant de 
+            générer l'amplitude de tous les partiels avec une seule valeur.
+            L'amplitude de chacun des partiels est l'amplitude du partiel
+            précédent multipliée par ce facteur. A(n) = A(n-1) * facteur.
+        Réduction dur:
+            Facteur de réduction d'une série de puissance permettant de 
+            contrôler la durée de l'enveloppe de tous les partiels avec 
+            une seule valeur. La durée des segments de l'enveloppe de 
+            chacun des partiels est la durée des segments de l'enveloppe 
+            du partiel précédent multipliée par ce facteur. 
+            att(n) = att(n-1) * facteur, dec(n) = dec(n-1) * facteur, etc.
+        Fondamentale:
+            Fréquence fondamentale du signal en Hertz. Pour des timbres
+            inharmoniques, on dirait plutôt que c'est la fréquence du premier
+            partiel.
+        Expansion:
+            Facteur de compression/expansion d'une série de puissance servant
+            à générer la fréquence de chacun des partiels. L'expression est
+            la suivante: f(n) = fond * n ^ facteur
+            La fréquence fondamentale est multipliée au rang harmonique, élevé
+            à une puisssance donnée par ce paramètre.
+            - Pour un facteur de 1 la série harmonique (multiples entiers) de 
+            la fréquence fondamentale.
+            - Pour un facteur prés de 0 de légères déviations (chorus) de la 
+            fréquence fondamentale.
+            - Pour un facteur > 1 une expansion exponentielle des fréquences 
+            des harmoniques.
+        Amp. Var. amp - freq - type
+            Contrôle les balises des générateurs aléatoires associés à 
+            l'amplitude des différents partiels. Chaque partiel possède son 
+            générateur aléatoire indépendant.
+            amp: Profondeur des variations.
+            freq: Vitesse, en Hertz, des variations.
+            type: Type de générateur, 0 = random avec interpolation,
+                  1 = random avec tenue (sample-and-hold), 
+                  2 = random uniforme (bruit blanc).
+        Freq Var. amp - freq - type
+            Contrôle les balises des générateurs aléatoires associés à la
+            fréquence des différents partiels. Chaque partiel possède son 
+            générateur aléatoire indépendant.
+            amp: Profondeur des variations.
+            freq: Vitesse, en Hertz, des variations.
+            type: Type de générateur, 0 = random avec interpolation,
+                  1 = random avec tenue (sample-and-hold), 
+                  2 = random uniforme (bruit blanc).
+        Forme d'onde:
+            Permet de changer la forme d'onde lue par chacun des partiels.
+            Une forme d'onde complexe permet de décupler rapidement, et 
+            efficacement, la quantité de composantes dans le signal final.
+        Jouer:
+            Bouton permettant de jouer un son. Un premier clic déclenche la 
+            première section de l'enveloppe (att - dec - sus) qui maintient
+            sa valeur de tenue. Un second clic active la phase de relâche
+            de l'enveloppe.
+
+    """
+    name = "06-Synthèse Additive"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelpt = wx.StaticText(self, -1, "Nombre de partiels")
+        self.pt = PyoGuiControlSlider(self, 1, 60, 30, integer=True)
+        self.pt.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.pt.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.setPartials)
+
+        sizer.Add(labelpt, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.pt, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+        envel = wx.StaticText(self, -1, "Env. ")
+        self.att = LabelKnob(self, " att", mini=1, maxi=2000, init=10, log=True, outFunction=self.setAttack)
+        self.dec = LabelKnob(self, " dec", mini=1, maxi=2000, init=100, log=True, outFunction=self.setDecay)
+        self.sus = LabelKnob(self, " sus", mini=0, maxi=1, init=0.7, outFunction=self.setSustain)
+        self.rel = LabelKnob(self, " rel", mini=1, maxi=2000, init=500, log=True, outFunction=self.setRelease)
+        box1.AddMany([(envel, 0, wx.ALIGN_CENTER_VERTICAL), (self.att, 1), (self.dec, 1), (self.sus, 1), (self.rel, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 5)
+
+        box2 = wx.BoxSizer(wx.HORIZONTAL)
+        ampbox = wx.BoxSizer(wx.VERTICAL)
+        labadf = wx.StaticText(self, -1, "Réduction amp")
+        self.adf = PyoGuiControlSlider(self, 0.5, 1, 0.9, size=(120,16))
+        self.adf.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.adf.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.setAmpDamp)
+        ampbox.Add(labadf, 0, wx.LEFT|wx.TOP, 5)
+        ampbox.Add(self.adf, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        box2.Add(ampbox, 1)
+        timbox = wx.BoxSizer(wx.VERTICAL)
+        labtim = wx.StaticText(self, -1, "Réduction dur")
+        self.tim = PyoGuiControlSlider(self, 0.5, 1, 0.9, size=(120,16))
+        self.tim.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.tim.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.setTimeDamp)
+        timbox.Add(labtim, 0, wx.LEFT|wx.TOP, 5)
+        timbox.Add(self.tim, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        box2.Add(timbox, 1)
+
+        sizer.Add(box2, 0, wx.EXPAND)
+
+        box3 = wx.BoxSizer(wx.HORIZONTAL)
+        funbox = wx.BoxSizer(wx.VERTICAL)
+        labfun = wx.StaticText(self, -1, "Fondamentale")
+        self.fun = PyoGuiControlSlider(self, 40, 4000, 200, log=True, size=(120,16))
+        self.fun.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fun.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.setFreq)
+        funbox.Add(labfun, 0, wx.LEFT|wx.TOP, 5)
+        funbox.Add(self.fun, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        box3.Add(funbox, 1)
+        spdbox = wx.BoxSizer(wx.VERTICAL)
+        labspd = wx.StaticText(self, -1, "Expansion")
+        self.spd = PyoGuiControlSlider(self, 0.001, 2, 1, log=True, size=(120,16))
+        self.spd.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.spd.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.setSpread)
+        spdbox.Add(labspd, 0, wx.LEFT|wx.TOP, 5)
+        spdbox.Add(self.spd, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        box3.Add(spdbox, 1)
+
+        sizer.Add(box3, 0, wx.EXPAND)
+
+        box4 = wx.BoxSizer(wx.HORIZONTAL)
+        ampvar = wx.StaticText(self, -1, "Amp. Var.  ")
+        self.ard = LabelKnob(self, " amp", mini=0, maxi=1, init=0, outFunction=self.setAmpVarAmp)
+        self.ars = LabelKnob(self, " freq", mini=0.01, maxi=20, init=1, log=True, outFunction=self.setAmpVarFreq)
+        self.art = LabelKnob(self, " type", mini=0, maxi=2.66, init=0, integer=True, outFunction=self.setAmpVarType)
+        box4.AddMany([(ampvar, 0, wx.ALIGN_CENTER_VERTICAL), (self.ard, 1), (self.ars, 1), (self.art, 1)])
+
+        box5 = wx.BoxSizer(wx.HORIZONTAL)
+        freqvar = wx.StaticText(self, -1, "Freq Var.  ")
+        self.frd = LabelKnob(self, " amp", mini=0, maxi=0.5, init=0, outFunction=self.setFreqVarAmp)
+        self.frs = LabelKnob(self, " freq", mini=0.01, maxi=20, init=1, log=True, outFunction=self.setFreqVarFreq)
+        self.frt = LabelKnob(self, " type", mini=0, maxi=2.66, init=0, integer=True, outFunction=self.setFreqVarType)
+        box5.AddMany([(freqvar, 0, wx.ALIGN_CENTER_VERTICAL), (self.frd, 1), (self.frs, 1), (self.frt, 1)])
+
+        sizer.Add(box4, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(box5, 0, wx.EXPAND | wx.ALL, 5)
+
+        box6 = wx.BoxSizer(wx.HORIZONTAL)
+        wavbox = wx.BoxSizer(wx.VERTICAL)
+        wavelabel = wx.StaticText(self, -1, "Forme d'onde")
+        choices = ["Sinus", "Scie 5", "Scie 15",
+                   "Scie 30", "Scie 60",
+                   "Carrée 5", "Carrée 15", 
+                   "Carrée 30", "Carrée 60",
+                   "Triangle 3", "Triangle 6",
+                   "Triangle 12", "Triangle 24"]
+        wave = wx.Choice(self, -1, choices=choices)
+        wave.SetSelection(0)
+        wave.Bind(wx.EVT_CHOICE, self.setWaveform)
+        wavbox.Add(wavelabel, 0, wx.LEFT|wx.TOP, 5)
+        wavbox.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        box6.Add(wavbox)
+        gobutton = wx.ToggleButton(self, label="Jouer")
+        gobutton.Bind(wx.EVT_TOGGLEBUTTON, self.play)
+        box6.Add(gobutton, 1, wx.EXPAND | wx.ALL, 5)
+
+        sizer.Add(box6, 0, wx.EXPAND)
+
+        self.SetSizer(sizer)
+
+    def play(self, evt):
+        if evt.GetInt():
+            self.addsynth.play()
+        else:
+            self.addsynth.stop()
+            
+    def setPartials(self, evt):
+        self.addsynth.setPartials(int(evt.value))
+
+    def setAttack(self, x):
+        self.addsynth.setAttack(x * 0.001)
+
+    def setDecay(self, x):
+        self.addsynth.setDecay(x * 0.001)
+
+    def setSustain(self, x):
+        self.addsynth.setSustain(x)
+
+    def setRelease(self, x):
+        self.addsynth.setRelease(x * 0.001)
+
+    def setAmpDamp(self, evt):
+        self.addsynth.setAmpDamp(evt.value)
+
+    def setTimeDamp(self, evt):
+        self.addsynth.setTimeDamp(evt.value)
+
+    def setAmpVarAmp(self, x):
+        self.addsynth.setAmpVarAmp(x)
+
+    def setAmpVarFreq(self, x):
+        self.addsynth.setAmpVarFreq(x)
+
+    def setAmpVarType(self, x):
+        self.addsynth.setAmpVarType(x)
+
+    def setFreqVarAmp(self, x):
+        self.addsynth.setFreqVarAmp(x)
+
+    def setFreqVarFreq(self, x):
+        self.addsynth.setFreqVarFreq(x)
+
+    def setFreqVarType(self, x):
+        self.addsynth.setFreqVarType(x)
+
+    def setWaveform(self, evt):
+        self.addsynth.setWaveform(evt.GetInt())
+
+    def setFreq(self, evt):
+        self.addsynth.setFreq(evt.value)
+
+    def setSpread(self, evt):
+        self.addsynth.setSpread(evt.value)
+
+    def processing(self):
+        self.addsynth = AdditiveSynthesis()
+        self.output = Sig(self.addsynth.output)
+        self.display = self.output
+
+class PulseWidthModModule(wx.Panel):
+    """
+    Module: 06-Modulation de largeur d'impulsion
+    --------------------------------------------
+
+    Ce module génère un signal audio à l'aide de la technique dite
+    de modulation à largeur d'impulsion.
+
+    Un signal à modulation de largeur d'impulsion (Pulse Width 
+    Modulation ou PWM en anglais) est constitué de deux composantes 
+    principales qui définissent son comportement: un rapport cyclique 
+    et une fréquence. Le rapport cyclique décrit la durée pendant 
+    laquelle le signal est à l'état haut (ouverture) en pourcentage 
+    de la durée d'un cycle complet. La fréquence détermine combien de
+    cycles complets le signal effectue à la seconde.
+
+    Contrôles:
+        Fréquence fondamentale en Hz:
+            Contrôle le nombre de cycles (périodes) complets par seconde.
+            C'est la fréquence fondamentale du signal en Hertz.
+        Cycle d'ouverture en %:
+            Contrôle la proportion de la phase d'ouverture par rapport
+            à la durée complète du cycle. 50 % signifie que le signal
+            passe autant de temps dans le positif que dans le négatif,
+            générant ainsi une forme d'onde carrée.
+        Filtre anti-alias:
+            Qualité du filtre passe-bas servant à adoucir les transitions
+            du signal entre 1 et -1. Une valeur de 0 signifie qu'il n'y a
+            pas de filtre anti-alias et que le signal alterne entre les 
+            deux pôles de façon instantannée. Une valeur positive indique
+            la taille de la réponse impulsionnelle du filtre passe-bas 
+            utilisé. La taille est équivalente à la valeur de ce paramètre
+            multiplié par 2.
+
+    """
+    name = "06-Modulation de largeur d'impulsion"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence fondamentale en Hz")
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 250, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
+
+        labeldc = wx.StaticText(self, -1, "Cycle d'ouverture en %")
+        self.dc = PyoGuiControlSlider(self, 1, 99, 50, integer=True)
+        self.dc.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.dc.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeDuty)
+
+        labelfl = wx.StaticText(self, -1, "Filtre anti-alias")
+        self.fl = PyoGuiControlSlider(self, 0, 32, 0, integer=True)
+        self.fl.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fl.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFilter)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labeldc, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.dc, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfl, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fl, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changeFreq(self, evt):
+        self.freq.value = evt.value
+
+    def changeDuty(self, evt):
+        self.duty.value = evt.value * 0.01
+
+    def changeFilter(self, evt):
+        self.output.damp = int(evt.value)
+
+    def processing(self):
+        self.freq = SigTo(250, 0.05)
+        self.duty = SigTo(0.5, 0.05)
+        self.output = PWM(self.freq, 0, self.duty, 0)
+        self.display = self.output
+
+class OscSyncModule(wx.Panel):
+    """
+    Module: 06-Oscillateur synchronisé
+    ----------------------------------
+
+    Ce module permet d'explorer le potentiel de l'oscillateur
+    synchronisé.
+
+    Un oscillateur synchronisé, dans les synthétiseurs analogiques,
+    était réalisé à l'aide de deux oscillateurs, un "maître" et un
+    dit "esclave". L'oscillateur maître est celui qui correspond à
+    la fréquence jouée au clavier et sert à remettre la phase de 
+    l'oscillateur esclave à zéro chaque fois que son cycle recommence.
+    En désaccordant la fréquence de l'oscillateur esclave, on peut
+    donc créer des formes d'ondes inédites puisque la phase de ce
+    dernier sera forcée de revenir à zéro avant d'avoir terminée 
+    son cycle. Cette technique génère un signal riche en harmooniques.
+
+    Contrôles:
+        Forme d'onde:
+            Permet de changer la forme d'onde lue par l'oscillateur
+            esclave. Une forme d'onde complexe enrichira d'autant plus
+            le spectre du signal final.
+        Fréquence maître en Hz:
+            Fréquence de l'oscillateur maître (que l'on entend pas).
+            Cet oscillateur ne sert qu'à la re-synchronisation mais
+            contrôle tout de même la fréquence fondamentale du signal.
+        Fréquence esclave en Hz:
+            Fréquence de l'oscillateur esclave. Selon que cette
+            fréquence est plus ou moins déphasée par rapport à la 
+            fréquence de l'oscillateur maître, la forme d'onde de
+            cet oscillateur ne terminera pas son cycle 
+            (f_slave < f_master) ou aura le temps d'en commencer 
+            un nouveau avant d'être re-synchronisé
+            (f_slave > f_master).
+        Fondu enchaîné en ms:
+            Ce paramètre permet de passer du mode "hard sync" (lorsqu'à
+            0) au mode "soft sync" (plus grande que 0) en utilisant
+            deux oscillateurs synchronisés et en appliquant un fondu
+            enchaîné entre les deux. la re-synchronisation est 
+            systématiquement appliquée à l'oscillateur qui est dans 
+            le silence afin d'adoucir l'impact (et la quantité 
+            d'harmoniques) du changement de phase instantanné.
+
+    """
+    name = "06-Oscillateur synchronisé"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        wavelabel = wx.StaticText(self, -1, "Forme d'onde")
+        choices = ["Sinus", "Scie 5", "Scie 15",
+                   "Scie 30", "Scie 60",
+                   "Carrée 5", "Carrée 15", 
+                   "Carrée 30", "Carrée 60",
+                   "Triangle 3", "Triangle 6",
+                   "Triangle 12", "Triangle 24"]
+        wave = wx.Choice(self, -1, choices=choices)
+        wave.SetSelection(0)
+        wave.Bind(wx.EVT_CHOICE, self.setWaveform)
+        sizer.Add(wavelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence maître en Hz")
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 100, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
+
+        labelfr2 = wx.StaticText(self, -1, "Fréquence esclave en Hz")
+        self.fr2 = PyoGuiControlSlider(self, 40, 2000, 110, log=True)
+        self.fr2.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr2.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSlave)
+
+        labelfl = wx.StaticText(self, -1, "Fondu enchaîné en ms")
+        self.fl = PyoGuiControlSlider(self, 0, 2, 0)
+        self.fl.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fl.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeCrossfade)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfr2, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr2, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfl, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fl, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def setWaveform(self, evt):
+        self.output.table = self.tables[evt.GetInt()]
+
+    def changeFreq(self, evt):
+        self.freq.value = evt.value
+
+    def changeSlave(self, evt):
+        self.slave.value = evt.value
+
+    def changeCrossfade(self, evt):
+        self.xfade.value = evt.value
+
+    def processing(self):
+        self.tables = [HarmTable(), SawTable(5), SawTable(15), SawTable(30), SawTable(60),
+                      SquareTable(5), SquareTable(15), SquareTable(30), SquareTable(60),
+                      TriTable(3), TriTable(6), TriTable(12), TriTable(24)]
+        self.freq = SigTo(100, 0.05)
+        self.slave = SigTo(110, 0.05)
+        self.xfade = SigTo(0, 0.05)
+        self.output = OscSync(self.tables[0], self.freq, self.slave, self.xfade)
+        self.display = self.output
+
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
            ReverbModule, PanningModule, HRTFModule, PeakRMSModule, 
-           EnvFollowerModule, GateModule, CompressModule]
+           EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule, 
+           AddSynthVarModule, PulseWidthModModule, OscSyncModule]
+
+if False:
+    class HeartPulseModule(wx.Panel):
+        """
+        Module: 99-Pulsation cardiaque
+        ------------------------------
+
+        Contrôles:
+            Position en azimuth:
+                Contrôle la position de la source en azimuth (plan 
+                horizontal). La position est donnée en degrés, entre
+                -180 et 180 degrés. -90 signifie que le son est 
+                complètement à gauche et à 90 degrés, le son est
+                complètement à droite.
+            Position en élévation:
+                Contrôle la position de la source en élévation (plan 
+                vertical). La position est donnée en degrés, entre
+                -40 et 90 degrés. 0 degrés signifie que le son est
+                au niveau des oreilles et à 90 degrés, le son est
+                au dessus de la tête.
+
+        """
+        name = "99-Pulsation cardiaque"
+        def __init__(self, parent):
+            wx.Panel.__init__(self, parent)
+            sizer = wx.BoxSizer(wx.VERTICAL)
+
+            head = HeadTitle(self, "Interface du Module")
+            sizer.Add(head, 0, wx.EXPAND)
+
+            labelbpm = wx.StaticText(self, -1, "Pulsation en BPM")
+            self.bpm = PyoGuiControlSlider(self, 40, 140, 60, log=False)
+            self.bpm.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+            self.bpm.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBPM)
+
+            labelvar = wx.StaticText(self, -1, "Variabilité")
+            self.var = PyoGuiControlSlider(self, 0, 100, 0, integer=True)
+            self.var.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+            self.var.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeVariability)
+
+            self.label = wx.StaticText(self, -1, "Fréq. cardiaque en BPM: % 60")
+            sizer.Add(labelbpm, 0, wx.LEFT|wx.TOP, 5)
+            sizer.Add(self.bpm, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+            sizer.Add(labelvar, 0, wx.LEFT|wx.TOP, 5)
+            sizer.Add(self.var, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+            sizer.Add(self.label, 0, wx.LEFT|wx.TOP, 5)
+
+            self.SetSizer(sizer)
+
+        def changeBPM(self, evt):
+            self.speed.value = 60 / evt.value
+
+        def changeVariability(self, evt):
+            self.varia.value = evt.value * 0.01
+
+        def report(self):
+            sec = self.timer.get()
+            bpm = 60 / sec
+            wx.CallAfter(self.label.SetLabel, "Fréq. cardiaque en BPM: % 3d" % bpm)
+
+        def processing(self):
+            self.env = CosTable([(0,0), (512, 1), (1024, 0), (1536,1), (2048,0), (8192,0)])
+            self.speed = SigTo(60 / 80, 0.05)
+            self.varia = SigTo(0.0, 0.05)
+            self.rndvar = Randi(-(self.speed*self.varia), self.speed*self.varia, 0.5)
+            self.metro = Metro(self.speed+self.rndvar, poly=1).play()
+            self.timer = Timer(self.metro, self.metro)
+            self.change = TrigFunc(Change(self.timer), self.report)
+            self.amp = TrigEnv(self.metro, self.env, dur=self.speed)
+            self.output = MoogLP(BrownNoise(self.amp), [250, 400], 0.9, mul=[0.7, 0.4]).mix(1)
+            self.display = self.output
+
+    MODULES.append(HeartPulseModule)
