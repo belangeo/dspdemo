@@ -7,7 +7,7 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{F36E72B3-D31D-4808-8F85-A9506960E905}
 AppName=DSPDemo
-AppVersion=0.0.7
+AppVersion=0.0.8
 AppPublisher=ajaxsoundstudio.com
 AppSupportURL=https://github.com/belangeo/dspdemo
 DefaultDirName={pf}\DSPDemo
@@ -15,7 +15,7 @@ DisableDirPage=yes
 DefaultGroupName=DSPDemo
 AllowNoIcons=yes
 LicenseFile=C:\Users\olivier\git\dspdemo\DSPDemo_Win\Resources\COPYING.txt
-OutputBaseFilename=DSPDemo_0.0.7_setup
+OutputBaseFilename=DSPDemo_0.0.8_setup
 Compression=lzma
 SolidCompression=yes
 ChangesAssociations=yes

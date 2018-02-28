@@ -1,7 +1,7 @@
 import os, sys
 
 APP_NAME = 'DSPDemo'
-APP_VERSION = '0.0.7'
+APP_VERSION = '0.0.8'
 APP_COPYRIGHT = 'Olivier Bélanger, 2018'
 
 if '/%s.app' % APP_NAME in os.getcwd():
