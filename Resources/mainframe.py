@@ -1,7 +1,7 @@
 import sys
 import wx
 from wx.adv import AboutDialogInfo, AboutBox
-from pyo import *
+from pyo64 import *
 from .modules import *
 from .constants import *
 from .utils import audio_config, dump_func

@@ -1,6 +1,6 @@
 import os
 import wx
-from pyo import *
+from pyo64 import *
 from .constants import *
 from .widgets import HeadTitle, LabelKnob
 from .bandlimited import DSPDemoBLOsc, SchroederVerb1, SchroederVerb2, AdditiveSynthesis, TriTable, PWM, OscSync

@@ -1,6 +1,6 @@
 import os
 import sys
-from pyo import pa_get_devices_infos, pa_get_default_devices_from_host
+from pyo64 import pa_get_devices_infos, pa_get_default_devices_from_host
 
 def dump_func(arg):
     pass
