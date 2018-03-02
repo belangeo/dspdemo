@@ -35,6 +35,7 @@ class Knob(wx.Panel):
                  size=(26, 26), style=wx.TAB_TRAVERSAL, outFunction=None):
         wx.Panel.__init__(self, parent, id, pos, size, style)
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.SetBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)

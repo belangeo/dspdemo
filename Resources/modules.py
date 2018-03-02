@@ -1890,9 +1890,12 @@ class AddSynthVarModule(wx.Panel):
         wavbox.Add(wavelabel, 0, wx.LEFT|wx.TOP, 5)
         wavbox.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
         box6.Add(wavbox)
+        playbox = wx.BoxSizer(wx.VERTICAL)
+        playbox.Add(wx.StaticText(self, -1, ""), 0, wx.LEFT|wx.TOP, 5)
         gobutton = wx.ToggleButton(self, label="Jouer")
         gobutton.Bind(wx.EVT_TOGGLEBUTTON, self.play)
-        box6.Add(gobutton, 1, wx.EXPAND | wx.ALL, 5)
+        playbox.Add(gobutton, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        box6.Add(playbox, 1)
 
         sizer.Add(box6, 0, wx.EXPAND)
 
