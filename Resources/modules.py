@@ -25,7 +25,7 @@ class InputPanel(wx.Choicebook):
         self.lfofreq = SigTo(250, 0.05)
         self.lfooscil = LFO(freq=self.lfofreq, sharp=0.0, type=7)
 
-        # Band-limited oscillator 
+        # Band-limited oscillator
         self.oscfreq = SigTo(250, 0.05)
         self.oscbright = SigTo(0.5, 0.05)
         self.oscshape = SigTo(0.25, 0.05)
@@ -49,7 +49,7 @@ class InputPanel(wx.Choicebook):
 
     def OnPageChanged(self, evt):
         sel = evt.GetSelection()
-        obj = [self.lfooscil, self.oscillator, self.soundfilemono, 
+        obj = [self.lfooscil, self.oscillator, self.soundfilemono,
                self.noisegenerator][sel]
         self.output.setInput(obj, 0.1)
 
@@ -61,7 +61,7 @@ class InputPanel(wx.Choicebook):
         sizer.Add(wx.StaticLine(panel, size=(300, 2)))
         sizer.AddSpacer(5)
 
-        choices = ["Sinusoïde", "Rampe", "Dent de scie", "Carrée", 
+        choices = ["Sinusoïde", "Rampe", "Dent de scie", "Carrée",
                    "Triangle", "Impulsion unipolaire", "Impulsion bipolaire"]
         wtyp = wx.Choice(panel, -1, choices=choices)
         wtyp.SetSelection(0)
@@ -273,12 +273,12 @@ class ResamplingModule(wx.Panel):
     Module: 01-Échantillonnage
     --------------------------
 
-    Ce module illustre l'effet de l'opération d'échantillonnage sur 
-    le spectre de fréquence d'un signal. Il est composé d'un choix 
-    de fréquences d'échantillonnage (en division de la fréquence 
-    d'échantillonnage courante), d'un filtre anti-repliement 
+    Ce module illustre l'effet de l'opération d'échantillonnage sur
+    le spectre de fréquence d'un signal. Il est composé d'un choix
+    de fréquences d'échantillonnage (en division de la fréquence
+    d'échantillonnage courante), d'un filtre anti-repliement
     (appliqué avant le ré-échantillonnage afin de contrôler le
-    repliement de spectre) et d'un filtre de reconstruction 
+    repliement de spectre) et d'un filtre de reconstruction
     (appliqué avant la reconstruction du signal afin d'éliminer
     les copies du spectre d'origine apparues lors de la numérisation
     du signal).
@@ -301,7 +301,7 @@ class ResamplingModule(wx.Panel):
         Filtre de reconstruction:
             Le filtre utilisé pour reconstruire le signal en éliminant les
             copies (autour des multiples de la fréquence d'échantillonnage)
-            provoquées par la multiplication du signal par un train 
+            provoquées par la multiplication du signal par un train
             d'impulsions.
             "Aucun" : Auncun filtre n'est appliqué
             "FIR-8" : Fonction pieuvre à 8 points
@@ -382,7 +382,7 @@ class QuantizeModule(wx.Panel):
     -------------------------
 
     Ce module illustre l'impact du nombre de bits de quantification
-    utilisés lors de la numérisation d'un signal. En dessous de 8 
+    utilisés lors de la numérisation d'un signal. En dessous de 8
     bits, on perçoit clairement l'ajout du bruit de quantification
     au signal original. Le module permet aussi d'ajouter un bruit
     de dispersion (dither) afin de masquer le bruit de quantification
@@ -396,7 +396,7 @@ class QuantizeModule(wx.Panel):
             On peut visualiser (et écouter) le signal dégradé ou le
             bruit de quantification seul.
         Bruit de dispersion:
-            Ajout d'un bruit de dispersion. Diverses variantes de bruit 
+            Ajout d'un bruit de dispersion. Diverses variantes de bruit
             sont offertes.
 
     """
@@ -457,7 +457,7 @@ class QuantizeModule(wx.Panel):
         self.ndither.value = self.nsignals[evt.GetInt()]
 
     def processing(self):
-        self.nsignals = [Sig(0), Noise(), ((Noise()+Noise())/2), 
+        self.nsignals = [Sig(0), Noise(), ((Noise()+Noise())/2),
                          ((Noise()+Noise()+Noise()+Noise()+Noise()+Noise())/2),
                          Atone(Noise(), 2500), Tone(Noise(), 2500)]
         self.ndither = Sig(self.nsignals[0], mul=0)
@@ -472,9 +472,9 @@ class FiltersModule(wx.Panel):
     Module: 01-Filtrage
     -------------------
 
-    Ce module permet de comparer l'effet des principaux filtres sur 
-    le signal audio. En plus du choix du filtre, des contrôles sont 
-    offerts pour la fréquence de coupure (ou centrale), le facteur 
+    Ce module permet de comparer l'effet des principaux filtres sur
+    le signal audio. En plus du choix du filtre, des contrôles sont
+    offerts pour la fréquence de coupure (ou centrale), le facteur
     de qualité (Q du filtre), le gain des filtres d'égalisation et
     l'ordre des filtres de base (passe-bas, passe-haut, passe-bande
     et réjecteur de bande).
@@ -482,7 +482,7 @@ class FiltersModule(wx.Panel):
     Contrôles:
         Type de filtre:
             Permet de sélectionner le type de filtre parmi le choix
-            suivant: passe-bas, passe-haut, passe-bande, réjecteur de 
+            suivant: passe-bas, passe-haut, passe-bande, réjecteur de
             bande, crête/creux, dégradé passe-bas et dégradé passe-haut.
         Fréquence de coupure/centrale:
             Fréquence de coupure (ou centrale) du filtre en Hertz.
@@ -494,10 +494,10 @@ class FiltersModule(wx.Panel):
             Le contrôle de gain, en dB, pour les filtres d'égalisation
             (crête/creux et dégradé).
         Ordre du filtre:
-            L'ordre des filtres passe-bas, passe-haut, passe-bande et 
-            réjecteur de bande. L'ordre correspond au plus grand nombre 
-            d'échantillons passés utilisés par le filtre. Plus l'ordre 
-            est grand, plus le filtre peut de produire des bandes de 
+            L'ordre des filtres passe-bas, passe-haut, passe-bande et
+            réjecteur de bande. L'ordre correspond au plus grand nombre
+            d'échantillons passés utilisés par le filtre. Plus l'ordre
+            est grand, plus le filtre peut de produire des bandes de
             transition abruptes.
 
     """
@@ -518,7 +518,7 @@ class FiltersModule(wx.Panel):
         sizer.Add(head, 0, wx.EXPAND)
 
         chooselabel = wx.StaticText(self, -1, "Type de filtre")
-        choices = ["Passe-bas", "Passe-haut", "Passe-bande", 
+        choices = ["Passe-bas", "Passe-haut", "Passe-bande",
                    "Réjecteur de bande", "Crête/Creux (peak/notch)",
                    "Dégradé passe-bas", "Dégradé passe-haut"]
         self.choose = wx.Choice(self, -1, choices=choices)
@@ -593,9 +593,9 @@ class FiltersModule(wx.Panel):
         self.filtfreq = SigTo(1000, 0.05)
         self.filt1Q = SigTo(1, 0.05)
         self.filt2Q = SigTo(1, 0.05)
-        self.filter1 = Biquadx(self.inputpanel.output, freq=self.filtfreq, 
+        self.filter1 = Biquadx(self.inputpanel.output, freq=self.filtfreq,
                                q=self.filt1Q, stages=1)
-        self.filter2 = EQ(self.inputpanel.output, freq=self.filtfreq, 
+        self.filter2 = EQ(self.inputpanel.output, freq=self.filtfreq,
                           q=self.filt2Q, boost=-3.00)
         self.output = Interp(self.filter1, self.filter2, 0)
         self.display = self.output
@@ -607,7 +607,7 @@ class FixedDelayModule(wx.Panel):
 
     Ce module permet de visualiser l'effet du temps de délai lorsqu'un
     signal original est additionné à une version délayé de lui-même. Les
-    effets obtenus sont le filtre passe-bas pour de très courts délais, 
+    effets obtenus sont le filtre passe-bas pour de très courts délais,
     toute la gamme de filtres en peigne pour des délais se situant entre
     0.1 et 50 ms, et finalement les effets d'échos pour les temps de
     délai plus grand que 50 ms.
@@ -626,7 +626,7 @@ class FixedDelayModule(wx.Panel):
         Réinjection en %:
             Permet d'ajuster la proportion du signal de sortie qui
             est réinjecté en entrée du délai (délai récursif). Plus
-            la réinjection est grande, plus les pics de résonance 
+            la réinjection est grande, plus les pics de résonance
             sont prononcés.
 
     """
@@ -689,9 +689,9 @@ class VariableDelayModule(wx.Panel):
     ---------------------------
 
     Ce module met en place une ligne de délai modulée à l'aide d'un
-    oscillateur sinusoïdal. Les paramètres de fréquence du LFO, 
+    oscillateur sinusoïdal. Les paramètres de fréquence du LFO,
     de délai moyen et de profondeur de la modulation peuvent être
-    ajustés de façon à créer soit un effet de flanger ou un effet 
+    ajustés de façon à créer soit un effet de flanger ou un effet
     de chorus.
 
     Valeurs typiques pour un flanger:
@@ -714,12 +714,12 @@ class VariableDelayModule(wx.Panel):
             le temps de délai autour de cette valeur.
         Profondeur de la modulation (%):
             Profondeur de la modulation autour du temps de délai moyen. À
-            0 %, le délai est fixe, à 100 %, le temps délai oscille de 0 ms 
+            0 %, le délai est fixe, à 100 %, le temps délai oscille de 0 ms
             à la valeur du délai moyen multiplié par 2.
         Réinjection en %:
             Permet d'ajuster la proportion du signal de sortie qui
             est réinjecté en entrée du délai (délai récursif). Plus
-            la réinjection est grande, plus les pics de résonance 
+            la réinjection est grande, plus les pics de résonance
             sont prononcés.
 
     """
@@ -802,8 +802,8 @@ class PhasingModule(wx.Panel):
     les pics d'amplitude couvre tout le spectre et sont équidistants.
     Dans un phaser, le nombre de pics dans le spectre dépend du nombre
     de filtres utilisés (12 dans ce cas-ci) et la répartition des
-    pics dépend de la fréquence centrale de chacun des filtres. 
-    L'algorithme utilisé dans ce module consiste en une fréquence de 
+    pics dépend de la fréquence centrale de chacun des filtres.
+    L'algorithme utilisé dans ce module consiste en une fréquence de
     base (celle du premier filtre) et en un facteur d'expansion, à
     partir duquel sont calculées les fréquences centrales de autres
     filtres.
@@ -818,7 +818,7 @@ class PhasingModule(wx.Panel):
         Réinjection en %:
             Permet d'ajuster la proportion du signal de sortie qui
             est réinjecté en entrée du délai (délai récursif). Plus
-            la réinjection est grande, plus les pics de résonance 
+            la réinjection est grande, plus les pics de résonance
             sont prononcés.
 
     """
@@ -874,8 +874,8 @@ class PhasingModule(wx.Panel):
         self.freq = SigTo(100, 0.05)
         self.spread = SigTo(1.3, 0.05)
         self.dfeed = SigTo(0.5, 0.05)
-        self.output = Phaser(self.inputpanel.output, freq=self.freq, 
-                             spread=self.spread, q=1, 
+        self.output = Phaser(self.inputpanel.output, freq=self.freq,
+                             spread=self.spread, q=1,
                              feedback=self.dfeed, num=12, mul=self.amp)
         self.display = self.output.mix()
 
@@ -885,8 +885,8 @@ class TransposeModule(wx.Panel):
     ------------------------
 
     Ce module illustre le transposition dans le domaine temporel
-    à l'aide de deux lignes de délai supperposées dont les temps 
-    de délai varient linéairement afin de produire une transposition 
+    à l'aide de deux lignes de délai supperposées dont les temps
+    de délai varient linéairement afin de produire une transposition
     constante. La vitesse de déplacement du pointeur de lecture est
     calculée en fonction de la transposition désirée, en demi-tons.
 
@@ -974,8 +974,8 @@ class ReverbModule(wx.Panel):
         la somme est passée dans deux filtres passe-tout en série.
     Réverbérateur de Schroeder, modèle 2:
         Algorithme utilsant quatre filtres passe-tout en série. Le signal
-        de chacun des filtres est ensuite passé dans un filtre passe-bas 
-        et la somme des signaux de sortie des filtres passe-bas constitue 
+        de chacun des filtres est ensuite passé dans un filtre passe-bas
+        et la somme des signaux de sortie des filtres passe-bas constitue
         le signal réverbéré.
     Freeverb:
         Cet algorithme est une extension du modèle numéro 1 de Schroeder,
@@ -995,11 +995,11 @@ class ReverbModule(wx.Panel):
 
     Contrôles:
         Type de réverbération:
-            Menu déroulant permettant de choisir un algorithme de 
+            Menu déroulant permettant de choisir un algorithme de
             réverbération.
         Taille de la pièce:
-            Grandeur de la pièce virtuelle. En quelque sorte, ce 
-            paramètre permet de contrôler la profondeur de la 
+            Grandeur de la pièce virtuelle. En quelque sorte, ce
+            paramètre permet de contrôler la profondeur de la
             réverbération. 0 = petit espace, 1 = grand espace.
         Atténuation hautes fréquences:
             Vitesse à laquelle les hautes fréquences sont absorbées
@@ -1026,7 +1026,7 @@ class ReverbModule(wx.Panel):
         sizer.Add(head, 0, wx.EXPAND)
 
         typelabel = wx.StaticText(self, -1, "Type de réverbération")
-        choices = ["Schroeder modèle 1", "Schroeder modèle 2", 
+        choices = ["Schroeder modèle 1", "Schroeder modèle 2",
               "Freeverb", "Réseau de délais récursifs",
               "Réverbe par convolution"]
         type = wx.Choice(self, -1, choices=choices)
@@ -1087,10 +1087,10 @@ class ReverbModule(wx.Panel):
         self.bal = SigTo(0.25, 0.05)
         self.rev1 = SchroederVerb1(self.inputpanel.output, self.size, self.damp)
         self.rev2 = SchroederVerb2(self.inputpanel.output, self.size, self.damp)
-        self.rev3 = Freeverb(self.inputpanel.output, [self.size, self.size*0.99], 
+        self.rev3 = Freeverb(self.inputpanel.output, [self.size, self.size*0.99],
                              [self.damp*0.99, self.damp], 1)
         self.r4damp = Scale(self.damp, outmin=10000, outmax=500)
-        self.rev4 = WGVerb(self.inputpanel.output, [self.size, self.size*0.99], 
+        self.rev4 = WGVerb(self.inputpanel.output, [self.size, self.size*0.99],
                            [self.r4damp*0.99, self.r4damp], 1)
         impulse = os.path.join(RESOURCES_PATH, "IRMediumHallStereo.wav")
         self.rev5 = CvlVerb(self.inputpanel.output, impulse=impulse, bal=1).stop()
@@ -1104,7 +1104,7 @@ class PanningModule(wx.Panel):
     -------------------------
 
     Ce module permet de comparer trois différents algorithmes de
-    panoramisation. 
+    panoramisation.
 
     - Linéaire:
         Le moins coûteux en temps de calcul, l'intensité totale
@@ -1119,7 +1119,7 @@ class PanningModule(wx.Panel):
         Cet algorithme est un compromis entre les deux précédents
         en ce qui a trait au temps de calcul (plus coûteux que
         la panoramisation linéaire mais moins que sinus/cosinus)
-        tout en conservant une intensité totale de 1 sur tout 
+        tout en conservant une intensité totale de 1 sur tout
         l'arc de panoramisation. Par contre, la courbe est un peu
         abrupte aux extrémités (proche de 0 ou de 1).
 
@@ -1174,7 +1174,7 @@ class PanningModule(wx.Panel):
         self.pan = SigTo(0.5, 0.05)
         self.pan1 = Sig(self.inputpanel.output, mul=[1 - self.pan, self.pan])
         self.pan2 = Pan(self.inputpanel.output, pan=self.pan)
-        self.pan3 = Sig(self.inputpanel.output, 
+        self.pan3 = Sig(self.inputpanel.output,
                         mul=[Sqrt(1 - self.pan), Sqrt(self.pan)])
         self.output = InputFader(self.pan1)
         self.display = self.output
@@ -1191,7 +1191,7 @@ class HRTFModule(wx.Panel):
 
     http://alumni.media.mit.edu/~kdm/hrtfdoc/hrtfdoc.html
 
-    On contrôle la position de la source est spécifiant ses 
+    On contrôle la position de la source est spécifiant ses
     coordonnées en azimuth et en élévation.
 
     Cet algorithme utilise une banque de filtres pré-enregistrés
@@ -1203,13 +1203,13 @@ class HRTFModule(wx.Panel):
 
     Contrôles:
         Position en azimuth:
-            Contrôle la position de la source en azimuth (plan 
+            Contrôle la position de la source en azimuth (plan
             horizontal). La position est donnée en degrés, entre
-            -180 et 180 degrés. -90 signifie que le son est 
+            -180 et 180 degrés. -90 signifie que le son est
             complètement à gauche et à 90 degrés, le son est
             complètement à droite.
         Position en élévation:
-            Contrôle la position de la source en élévation (plan 
+            Contrôle la position de la source en élévation (plan
             vertical). La position est donnée en degrés, entre
             -40 et 90 degrés. 0 degrés signifie que le son est
             au niveau des oreilles et à 90 degrés, le son est
@@ -1317,7 +1317,7 @@ class EnvFollowerModule(wx.Panel):
     Module: 05-Suivi d'enveloppe
     ----------------------------
 
-    Ce module illustre le suivi d'enveloppe d'amplitude. La source 
+    Ce module illustre le suivi d'enveloppe d'amplitude. La source
     est d'abord analysée puis son suivi d'amplitude est utilisé pour
     contrôler l'amplitude d'un bruit rose en accompagnement.
 
@@ -1374,7 +1374,7 @@ class GateModule(wx.Panel):
     Ce module permet d'expérimenter avec la porte de bruit.
 
     Lorsque le suivi d'amplitude du signal passe sous le seuil spécifé,
-    l'amplitude descend à zéro à une vitesse donnée par le temps de 
+    l'amplitude descend à zéro à une vitesse donnée par le temps de
     relâche. Lorsqu'il remonte au-dessus du seuil, l'amplitude retourne
     à 1 à une vitesse donnée par le temps d'attaque.
 
@@ -1463,17 +1463,17 @@ class CompressModule(wx.Panel):
         Seuil en dB:
             Seuil, en décibels, au-dessus duquel le signal est compressé.
         Ratio de compression:
-            Rapport entre le gain du signal en entré et en sortie du 
+            Rapport entre le gain du signal en entré et en sortie du
             compresseur. Un ratio de 2 signifie que pour 2 décibels
             au-dessus du seuil en entrée, l'amplitude du signal en sortie
-            sera de seulement 1 décibel au-dessus du seuil. 
+            sera de seulement 1 décibel au-dessus du seuil.
         Temps d'attaque en seconde:
             Durée, en seconde, que prend le compresseur pour atteindre son
             plein niveau de compression lorsque le suivi d'amplitude passe
             au-dessus du seuil.
         Temps de relâche en seconde:
-            Durée, en seconde, que prend le compresseur pour arrêter de 
-            compresser lorsque le suivi d'amplitude passe au-dessous du 
+            Durée, en seconde, que prend le compresseur pour arrêter de
+            compresser lorsque le suivi d'amplitude passe au-dessous du
             seuil.
 
     """
@@ -1563,13 +1563,13 @@ class MBCompressModule(wx.Panel):
 
     Contrôles:
         Position en azimuth:
-            Contrôle la position de la source en azimuth (plan 
+            Contrôle la position de la source en azimuth (plan
             horizontal). La position est donnée en degrés, entre
-            -180 et 180 degrés. -90 signifie que le son est 
+            -180 et 180 degrés. -90 signifie que le son est
             complètement à gauche et à 90 degrés, le son est
             complètement à droite.
         Position en élévation:
-            Contrôle la position de la source en élévation (plan 
+            Contrôle la position de la source en élévation (plan
             vertical). La position est donnée en degrés, entre
             -40 et 90 degrés. 0 degrés signifie que le son est
             au niveau des oreilles et à 90 degrés, le son est
@@ -1627,17 +1627,17 @@ class AddSynthFixModule(wx.Panel):
 
     Ce module permet de construire graduellement des formes d'onde
     en dent de scie, carrée et triangulaire par sommation d'ondes
-    sinusoïdales. 
+    sinusoïdales.
 
-    Dent de scie: 
-        Constituée de toutes les harmoniques. L'amplitude de chacune 
+    Dent de scie:
+        Constituée de toutes les harmoniques. L'amplitude de chacune
         des harmoniques est l'inverse de son rang, A(n) = 1 / n.
-    Onde carrée: 
+    Onde carrée:
         Constituée uniquement des harmoniques impaires. L'amplitude
         de chacune des harmoniques est l'inverse de son rang, A(n) = 1 / n.
-    Onde triangulaire: 
+    Onde triangulaire:
         Constituée uniquement des harmoniques impaires. L'amplitude
-        de chacune des harmoniques est l'inverse de son rang au carrée, 
+        de chacune des harmoniques est l'inverse de son rang au carrée,
         A(n) = 1 / (n*n). Dans le cas de l'onde triangulaire, chaque
         deuxième harmonique est inversée en phase.
 
@@ -1736,16 +1736,16 @@ class AddSynthVarModule(wx.Panel):
             rel: Durée, en milliseconde, de la relâche, c'est-à-dire le retour
                  à zéro de l'enveloppe.
         Réduction amp:
-            Facteur de réduction d'une série de puissance permettant de 
+            Facteur de réduction d'une série de puissance permettant de
             générer l'amplitude de tous les partiels avec une seule valeur.
             L'amplitude de chacun des partiels est l'amplitude du partiel
             précédent multipliée par ce facteur. A(n) = A(n-1) * facteur.
         Réduction dur:
-            Facteur de réduction d'une série de puissance permettant de 
-            contrôler la durée de l'enveloppe de tous les partiels avec 
-            une seule valeur. La durée des segments de l'enveloppe de 
-            chacun des partiels est la durée des segments de l'enveloppe 
-            du partiel précédent multipliée par ce facteur. 
+            Facteur de réduction d'une série de puissance permettant de
+            contrôler la durée de l'enveloppe de tous les partiels avec
+            une seule valeur. La durée des segments de l'enveloppe de
+            chacun des partiels est la durée des segments de l'enveloppe
+            du partiel précédent multipliée par ce facteur.
             att(n) = att(n-1) * facteur, dec(n) = dec(n-1) * facteur, etc.
         Fondamentale:
             Fréquence fondamentale du signal en Hertz. Pour des timbres
@@ -1757,36 +1757,36 @@ class AddSynthVarModule(wx.Panel):
             la suivante: f(n) = fond * n ^ facteur
             La fréquence fondamentale est multipliée au rang harmonique, élevé
             à une puisssance donnée par ce paramètre.
-            - Pour un facteur de 1 la série harmonique (multiples entiers) de 
+            - Pour un facteur de 1 la série harmonique (multiples entiers) de
             la fréquence fondamentale.
-            - Pour un facteur prés de 0 de légères déviations (chorus) de la 
+            - Pour un facteur prés de 0 de légères déviations (chorus) de la
             fréquence fondamentale.
-            - Pour un facteur > 1 une expansion exponentielle des fréquences 
+            - Pour un facteur > 1 une expansion exponentielle des fréquences
             des harmoniques.
         Amp. Var. amp - freq - type
-            Contrôle les balises des générateurs aléatoires associés à 
-            l'amplitude des différents partiels. Chaque partiel possède son 
+            Contrôle les balises des générateurs aléatoires associés à
+            l'amplitude des différents partiels. Chaque partiel possède son
             générateur aléatoire indépendant.
             amp: Profondeur des variations.
             freq: Vitesse, en Hertz, des variations.
             type: Type de générateur, 0 = random avec interpolation,
-                  1 = random avec tenue (sample-and-hold), 
+                  1 = random avec tenue (sample-and-hold),
                   2 = random uniforme (bruit blanc).
         Freq Var. amp - freq - type
             Contrôle les balises des générateurs aléatoires associés à la
-            fréquence des différents partiels. Chaque partiel possède son 
+            fréquence des différents partiels. Chaque partiel possède son
             générateur aléatoire indépendant.
             amp: Profondeur des variations.
             freq: Vitesse, en Hertz, des variations.
             type: Type de générateur, 0 = random avec interpolation,
-                  1 = random avec tenue (sample-and-hold), 
+                  1 = random avec tenue (sample-and-hold),
                   2 = random uniforme (bruit blanc).
         Forme d'onde:
             Permet de changer la forme d'onde lue par chacun des partiels.
-            Une forme d'onde complexe permet de décupler rapidement, et 
+            Une forme d'onde complexe permet de décupler rapidement, et
             efficacement, la quantité de composantes dans le signal final.
         Jouer:
-            Bouton permettant de jouer un son. Un premier clic déclenche la 
+            Bouton permettant de jouer un son. Un premier clic déclenche la
             première section de l'enveloppe (att - dec - sus) qui maintient
             sa valeur de tenue. Un second clic active la phase de relâche
             de l'enveloppe.
@@ -1880,7 +1880,7 @@ class AddSynthVarModule(wx.Panel):
         wavelabel = wx.StaticText(self, -1, "Forme d'onde")
         choices = ["Sinus", "Scie 5", "Scie 15",
                    "Scie 30", "Scie 60",
-                   "Carrée 5", "Carrée 15", 
+                   "Carrée 5", "Carrée 15",
                    "Carrée 30", "Carrée 60",
                    "Triangle 3", "Triangle 6",
                    "Triangle 12", "Triangle 24"]
@@ -1906,7 +1906,7 @@ class AddSynthVarModule(wx.Panel):
             self.addsynth.play()
         else:
             self.addsynth.stop()
-            
+
     def setPartials(self, evt):
         self.addsynth.setPartials(int(evt.value))
 
@@ -1968,11 +1968,11 @@ class PulseWidthModModule(wx.Panel):
     Ce module génère un signal audio à l'aide de la technique dite
     de modulation à largeur d'impulsion.
 
-    Un signal à modulation de largeur d'impulsion (Pulse Width 
-    Modulation ou PWM en anglais) est constitué de deux composantes 
-    principales qui définissent son comportement: un rapport cyclique 
-    et une fréquence. Le rapport cyclique décrit la durée pendant 
-    laquelle le signal est à l'état haut (ouverture) en pourcentage 
+    Un signal à modulation de largeur d'impulsion (Pulse Width
+    Modulation ou PWM en anglais) est constitué de deux composantes
+    principales qui définissent son comportement: un rapport cyclique
+    et une fréquence. Le rapport cyclique décrit la durée pendant
+    laquelle le signal est à l'état haut (ouverture) en pourcentage
     de la durée d'un cycle complet. La fréquence détermine combien de
     cycles complets le signal effectue à la seconde.
 
@@ -1988,9 +1988,9 @@ class PulseWidthModModule(wx.Panel):
         Filtre anti-alias:
             Qualité du filtre passe-bas servant à adoucir les transitions
             du signal entre 1 et -1. Une valeur de 0 signifie qu'il n'y a
-            pas de filtre anti-alias et que le signal alterne entre les 
+            pas de filtre anti-alias et que le signal alterne entre les
             deux pôles de façon instantannée. Une valeur positive indique
-            la taille de la réponse impulsionnelle du filtre passe-bas 
+            la taille de la réponse impulsionnelle du filtre passe-bas
             utilisé. La taille est équivalente à la valeur de ce paramètre
             multiplié par 2.
 
@@ -2053,11 +2053,11 @@ class OscSyncModule(wx.Panel):
     Un oscillateur synchronisé, dans les synthétiseurs analogiques,
     était réalisé à l'aide de deux oscillateurs, un "maître" et un
     dit "esclave". L'oscillateur maître est celui qui correspond à
-    la fréquence jouée au clavier et sert à remettre la phase de 
+    la fréquence jouée au clavier et sert à remettre la phase de
     l'oscillateur esclave à zéro chaque fois que son cycle recommence.
     En désaccordant la fréquence de l'oscillateur esclave, on peut
     donc créer des formes d'ondes inédites puisque la phase de ce
-    dernier sera forcée de revenir à zéro avant d'avoir terminée 
+    dernier sera forcée de revenir à zéro avant d'avoir terminée
     son cycle. Cette technique génère un signal riche en harmooniques.
 
     Contrôles:
@@ -2071,19 +2071,19 @@ class OscSyncModule(wx.Panel):
             contrôle tout de même la fréquence fondamentale du signal.
         Fréquence esclave en Hz:
             Fréquence de l'oscillateur esclave. Selon que cette
-            fréquence est plus ou moins déphasée par rapport à la 
+            fréquence est plus ou moins déphasée par rapport à la
             fréquence de l'oscillateur maître, la forme d'onde de
-            cet oscillateur ne terminera pas son cycle 
-            (f_slave < f_master) ou aura le temps d'en commencer 
+            cet oscillateur ne terminera pas son cycle
+            (f_slave < f_master) ou aura le temps d'en commencer
             un nouveau avant d'être re-synchronisé
             (f_slave > f_master).
         Fondu enchaîné en ms:
             Ce paramètre permet de passer du mode "hard sync" (lorsqu'à
             0) au mode "soft sync" (plus grande que 0) en utilisant
             deux oscillateurs synchronisés et en appliquant un fondu
-            enchaîné entre les deux. la re-synchronisation est 
-            systématiquement appliquée à l'oscillateur qui est dans 
-            le silence afin d'adoucir l'impact (et la quantité 
+            enchaîné entre les deux. la re-synchronisation est
+            systématiquement appliquée à l'oscillateur qui est dans
+            le silence afin d'adoucir l'impact (et la quantité
             d'harmoniques) du changement de phase instantanné.
 
     """
@@ -2098,7 +2098,7 @@ class OscSyncModule(wx.Panel):
         wavelabel = wx.StaticText(self, -1, "Forme d'onde")
         choices = ["Sinus", "Scie 5", "Scie 15",
                    "Scie 30", "Scie 60",
-                   "Carrée 5", "Carrée 15", 
+                   "Carrée 5", "Carrée 15",
                    "Carrée 30", "Carrée 60",
                    "Triangle 3", "Triangle 6",
                    "Triangle 12", "Triangle 24"]
@@ -2154,81 +2154,315 @@ class OscSyncModule(wx.Panel):
         self.output = OscSync(self.tables[0], self.freq, self.slave, self.xfade)
         self.display = self.output
 
+class AmpModModule(wx.Panel):
+    """
+    Module: 07-Modulation de l'amplitude
+    ------------------------------------
+
+    Ce module permet de comparer la modulation en anneaux et la modulation
+    d'amplitude.
+
+    La différence, au niveau de l'implantation, entre ces des deux types
+    de modulation se situe au niveau de l'oscillateur modulant. Pour la
+    modulation en anneaux, il est bipolaire (oscille entre -1 et 1),
+    tandis que pour la modulation d'amplitude, il est unipolaire (oscille
+    entre 0 et 1).
+
+    Le spectre d'une modulation en anneaux consiste en la somme et la
+    différence entre chaque composante du signal porteur et chaque
+    composante du signal modulant.
+
+    Le spectre d'une modulation d'amplitude présente les même composantes
+    que la modulation en anneaux, en plus du signal porteur inchangé.
+
+    Contrôles:
+        Type de modulation:
+            Permet de sélectionner le type de modulation désiré.
+        Fréquence porteuse:
+            Fréquence, en Hertz, de l'oscillateur porteur. Cet oscillateur
+            est toujours bipolaire.
+        Fréquence modulante:
+            Fréquence, en Hertz, de l'oscillateur modulant.
+        Forme d'onde de la porteuse:
+            Permet de changer la forme d'onde lue par l'oscillateur porteur.
+            Une forme d'onde complexe enrichira d'autant plus le spectre du
+            signal final.
+        Forme d'onde de la modulante:
+            Permet de changer la forme d'onde lue par l'oscillateur modulant.
+            Une forme d'onde complexe enrichira d'autant plus le spectre du
+            signal final.
+
+    """
+    name = "07-Modulation de l'amplitude"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        typelabel = wx.StaticText(self, -1, "Type de modulation")
+        choices = ["Modulation en anneaux", "Modulation d'amplitude"]
+        type = wx.Choice(self, -1, choices=choices)
+        type.SetSelection(0)
+        type.Bind(wx.EVT_CHOICE, self.setType)
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence porteuse")
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 400, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePortFreq)
+
+        labelfr2 = wx.StaticText(self, -1, "Fréquence modulante")
+        self.fr2 = PyoGuiControlSlider(self, 1, 2000, 200, log=True)
+        self.fr2.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr2.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeModFreq)
+
+        choices = ["Sinus", "Scie 2", "Scie 5",
+                   "Scie 10", "Scie 20",
+                   "Carrée 2", "Carrée 5",
+                   "Carrée 10", "Carrée 20",
+                   "Triangle 2", "Triangle 5",
+                   "Triangle 10", "Triangle 20"]
+
+        wavelabel = wx.StaticText(self, -1, "Forme d'onde de la porteuse")
+        wave = wx.Choice(self, -1, choices=choices)
+        wave.SetSelection(0)
+        wave.Bind(wx.EVT_CHOICE, self.setWaveform)
+
+        wave2label = wx.StaticText(self, -1, "Forme d'onde de la modulante")
+        wave2 = wx.Choice(self, -1, choices=choices)
+        wave2.SetSelection(0)
+        wave2.Bind(wx.EVT_CHOICE, self.setWaveform2)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelfr2, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr2, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(wavelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(wave2label, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(wave2, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def setType(self, evt):
+        self.scaling.value = evt.GetInt() * 0.5
+
+    def changePortFreq(self, evt):
+        self.freq.value = evt.value
+
+    def changeModFreq(self, evt):
+        self.freq2.value = evt.value
+
+    def setWaveform(self, evt):
+        self.port.table = self.tables[evt.GetInt()]
+
+    def setWaveform2(self, evt):
+        self.mod.table = self.tables[evt.GetInt()]
+
+    def processing(self):
+        self.scaling = SigTo(0, 0.05, 0)
+        self.tables = [HarmTable(), SawTable(2), SawTable(5), SawTable(10), SawTable(20),
+                      SquareTable(2), SquareTable(5), SquareTable(10), SquareTable(20),
+                      TriTable(2), TriTable(5), TriTable(10), TriTable(20)]
+        self.freq = SigTo(400, 0.05)
+        self.freq2 = SigTo(200, 0.05)
+        self.mod = Osc(self.tables[0], self.freq2, mul=1-self.scaling, add=self.scaling)
+        self.port = Osc(self.tables[0], self.freq)
+        self.output = self.port * self.mod * 0.707
+        self.display = self.output
+
+class FreqModModule(wx.Panel):
+    """
+    Module: 07-Modulation de fréquence
+    ----------------------------------
+
+    Ce module permet d'explorer le potentiel de la modulation de fréquence
+    selon l'algorithme de John Chaowning.
+
+    Le spectre d'une modulation de fréquence présente la fréquence porteuse
+    et une série de bandes latérales (de chaque côté de la porteuse) aux
+    multiples de la fréquence modulante (P-M, P+M, P-2M, P+2M, P-3M, P+3M ...).
+
+    Contrôles:
+        Fréquence porteuse:
+            Fréquence porteuse en Hertz. À cette fréquence viendra
+            s'additionner le signal de l'oscillateur modulant pour
+            produire la fréquence modulée de l'oscillateur porteur.
+        Ratio porteuse:modulante:
+            Ce ratio détermine la fréquence de l'oscillateur modulant,
+            en relation avec la fréquence porteuse. La fréquence modulante
+            est la fréquence porteuse divisée par le ratio. Les rapports
+            d'entier donnent toujours un spectre harmonique.
+        Index de modulation:
+            Indique l'amplitude de l'oscillateur modulant en multiples
+            de la fréquence modulante (fréquence modulante multipliée
+            par index de modulation égale amplitude de l'oscillateur
+            modulant). Détermine le nombre de bandes latérales (I+1)
+            de chaque côté de la fréquence porteuse.
+        Forme d'onde de la porteuse:
+            Permet de changer la forme d'onde lue par l'oscillateur porteur.
+            Une forme d'onde complexe enrichira d'autant plus le spectre du
+            signal final.
+        Forme d'onde de la modulante:
+            Permet de changer la forme d'onde lue par l'oscillateur modulant.
+            Une forme d'onde complexe enrichira d'autant plus le spectre du
+            signal final.
+
+    """
+    name = "07-Modulation de fréquence"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence porteuse")
+        self.fr = PyoGuiControlSlider(self, 40, 5000, 400, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePortFreq)
+
+        labelra = wx.StaticText(self, -1, "Ratio porteuse:modulante")
+        self.ra = PyoGuiControlSlider(self, 0.1, 10, 1)
+        self.ra.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.ra.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRatio)
+
+        labelind = wx.StaticText(self, -1, "Index de modulation")
+        self.ind = PyoGuiControlSlider(self, 0, 40, 5)
+        self.ind.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.ind.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeIndex)
+
+        choices = ["Sinus", "Scie 2", "Scie 5",
+                   "Scie 10", "Scie 20",
+                   "Carrée 2", "Carrée 5",
+                   "Carrée 10", "Carrée 20",
+                   "Triangle 2", "Triangle 5",
+                   "Triangle 10", "Triangle 20"]
+
+        wavelabel = wx.StaticText(self, -1, "Forme d'onde de la porteuse")
+        wave = wx.Choice(self, -1, choices=choices)
+        wave.SetSelection(0)
+        wave.Bind(wx.EVT_CHOICE, self.setWaveform)
+
+        wave2label = wx.StaticText(self, -1, "Forme d'onde de la modulante")
+        wave2 = wx.Choice(self, -1, choices=choices)
+        wave2.SetSelection(0)
+        wave2.Bind(wx.EVT_CHOICE, self.setWaveform2)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelra, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.ra, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelind, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.ind, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(wavelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(wave2label, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(wave2, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changePortFreq(self, evt):
+        self.freq.value = evt.value
+
+    def changeRatio(self, evt):
+        self.ratio.value = evt.value
+
+    def changeIndex(self, evt):
+        self.index.value = evt.value
+
+    def setWaveform(self, evt):
+        self.port.table = self.tables[evt.GetInt()]
+
+    def setWaveform2(self, evt):
+        self.mod.table = self.tables[evt.GetInt()]
+
+    def processing(self):
+        self.tables = [HarmTable(), SawTable(2), SawTable(5), SawTable(10), SawTable(20),
+                      SquareTable(2), SquareTable(5), SquareTable(10), SquareTable(20),
+                      TriTable(2), TriTable(5), TriTable(10), TriTable(20)]
+        self.freq = SigTo(400, 0.05)
+        self.ratio = SigTo(200, 0.05)
+        self.index = SigTo(200, 0.05)
+        self.modfreq = self.freq / self.ratio
+        self.modamp = self.modfreq * self.index
+        self.mod = Osc(self.tables[0], self.modfreq, mul=self.modamp)
+        self.port = Osc(self.tables[0], self.freq+self.mod, mul=0.707)
+        self.output = self.display = self.port
+
+class AutoModModule(wx.Panel):
+    """
+    Module: 07-Auto-modulation
+    --------------------------
+
+    Ce module illustre l'auto-modulation.
+
+    L'auto-modulation consiste à moduler le pointeur de lecture d'une
+    forme d'onde avec la lecture (pondérée) de la forme d'onde elle-même.
+    Le résultat est équivalent à une modulation de fréquence dont le ratio
+    est fixé à 1.
+
+    freq ---> + ---> OSC ------>
+              |             |
+              ---<--- x <---
+                      |
+                    index
+
+    Contrôles:
+        Fréquence porteuse:
+            Fréquence porteuse en Hertz. À cette fréquence viendra
+            s'additionner le signal de sortie de l'oscillateur pour
+            produire la fréquence modulée de ce même oscillateur.
+        Index de modulation:
+            Indique le volume du signal de sortie de l'oscillateur qui
+            est additionné à la fréquence porteuse afin de moduler la
+            fréquence de l'oscillateur.
+
+    """
+    name = "07-Auto-modulation"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        labelfr = wx.StaticText(self, -1, "Fréquence porteuse")
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 200, log=True)
+        self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePortFreq)
+
+        labelind = wx.StaticText(self, -1, "Index de modulation")
+        self.ind = PyoGuiControlSlider(self, 0, 1, 0.1)
+        self.ind.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.ind.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeIndex)
+
+        sizer.Add(labelfr, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.fr, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelind, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.ind, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def changePortFreq(self, evt):
+        self.freq.value = evt.value
+
+    def changeIndex(self, evt):
+        self.index.value = evt.value
+
+    def processing(self):
+        self.table = HarmTable(size=32768)
+        self.freq = SigTo(200, 0.05)
+        self.index = SigTo(0.1, 0.05, mul=0.17)
+        self.port = OscLoop(self.table, self.freq, feedback=self.index, mul=0.707)
+        self.output = self.display = self.port
+
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
-           ReverbModule, PanningModule, HRTFModule, PeakRMSModule, 
-           EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule, 
-           AddSynthVarModule, PulseWidthModModule, OscSyncModule]
-
-if False:
-    class HeartPulseModule(wx.Panel):
-        """
-        Module: 99-Pulsation cardiaque
-        ------------------------------
-
-        Contrôles:
-            Position en azimuth:
-                Contrôle la position de la source en azimuth (plan 
-                horizontal). La position est donnée en degrés, entre
-                -180 et 180 degrés. -90 signifie que le son est 
-                complètement à gauche et à 90 degrés, le son est
-                complètement à droite.
-            Position en élévation:
-                Contrôle la position de la source en élévation (plan 
-                vertical). La position est donnée en degrés, entre
-                -40 et 90 degrés. 0 degrés signifie que le son est
-                au niveau des oreilles et à 90 degrés, le son est
-                au dessus de la tête.
-
-        """
-        name = "99-Pulsation cardiaque"
-        def __init__(self, parent):
-            wx.Panel.__init__(self, parent)
-            sizer = wx.BoxSizer(wx.VERTICAL)
-
-            head = HeadTitle(self, "Interface du Module")
-            sizer.Add(head, 0, wx.EXPAND)
-
-            labelbpm = wx.StaticText(self, -1, "Pulsation en BPM")
-            self.bpm = PyoGuiControlSlider(self, 40, 140, 60, log=False)
-            self.bpm.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-            self.bpm.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeBPM)
-
-            labelvar = wx.StaticText(self, -1, "Variabilité")
-            self.var = PyoGuiControlSlider(self, 0, 100, 0, integer=True)
-            self.var.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-            self.var.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeVariability)
-
-            self.label = wx.StaticText(self, -1, "Fréq. cardiaque en BPM: % 60")
-            sizer.Add(labelbpm, 0, wx.LEFT|wx.TOP, 5)
-            sizer.Add(self.bpm, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
-            sizer.Add(labelvar, 0, wx.LEFT|wx.TOP, 5)
-            sizer.Add(self.var, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
-            sizer.Add(self.label, 0, wx.LEFT|wx.TOP, 5)
-
-            self.SetSizer(sizer)
-
-        def changeBPM(self, evt):
-            self.speed.value = 60 / evt.value
-
-        def changeVariability(self, evt):
-            self.varia.value = evt.value * 0.01
-
-        def report(self):
-            sec = self.timer.get()
-            bpm = 60 / sec
-            wx.CallAfter(self.label.SetLabel, "Fréq. cardiaque en BPM: % 3d" % bpm)
-
-        def processing(self):
-            self.env = CosTable([(0,0), (512, 1), (1024, 0), (1536,1), (2048,0), (8192,0)])
-            self.speed = SigTo(60 / 80, 0.05)
-            self.varia = SigTo(0.0, 0.05)
-            self.rndvar = Randi(-(self.speed*self.varia), self.speed*self.varia, 0.5)
-            self.metro = Metro(self.speed+self.rndvar, poly=1).play()
-            self.timer = Timer(self.metro, self.metro)
-            self.change = TrigFunc(Change(self.timer), self.report)
-            self.amp = TrigEnv(self.metro, self.env, dur=self.speed)
-            self.output = MoogLP(BrownNoise(self.amp), [250, 400], 0.9, mul=[0.7, 0.4]).mix(1)
-            self.display = self.output
-
-    MODULES.append(HeartPulseModule)
+           ReverbModule, PanningModule, HRTFModule, PeakRMSModule,
+           EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule,
+           AddSynthVarModule, PulseWidthModModule, OscSyncModule, AmpModModule,
+           FreqModModule, AutoModModule]
