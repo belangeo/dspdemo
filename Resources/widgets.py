@@ -16,8 +16,9 @@ class DocFrame(wx.Frame):
         style = wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_DONTWRAP
         textctrl = wx.TextCtrl(panel, -1, text, style=style)
         font = textctrl.GetFont()
-        font.SetFamily(wx.FONTFAMILY_MODERN)
-        textctrl.SetFont(font)
+        newfont = wx.Font(font.GetPointSize(), wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        if newfont.IsOk():
+            textctrl.SetFont(newfont)
         sizer.Add(textctrl, 1, wx.EXPAND|wx.ALL, 5)
         panel.SetSizerAndFit(sizer)
         self.CenterOnScreen()
