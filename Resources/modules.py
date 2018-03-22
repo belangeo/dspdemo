@@ -1,4 +1,5 @@
 import os
+import math
 import wx
 from pyo64 import *
 from .constants import *
@@ -2460,9 +2461,233 @@ class AutoModModule(wx.Panel):
         self.port = OscLoop(self.table, self.freq, feedback=self.index, mul=0.707)
         self.output = self.display = self.port
 
+class ChebyFuncModule(wx.Panel):
+    """
+    Module: 08-Fonctions de Chebychev
+    ---------------------------------
+
+    Ce module permet de manipuler une fonction de transfert créée à l'aide
+    des 10 premiers polynômes de Chebychev.
+
+    Une fenêtre flottante s'affiche avec ce module afin de visualiser la 
+    fonction de transfert.
+
+    La fonction de transfert est automatiquement normalisée afin de ne jamais
+    dépasser l'ambitus -1 à 1.
+
+    Contrôles:
+        Amplitudes des polynômes (T1 à T10):
+            Amplitudes, entre -1 et 1, des 10 premiers polynômes de Chebychev.
+            La somme de ces 10 polynômes constituent la fonction de transfert.
+
+    """
+    name = "08-Fonctions de Chebychev"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.amplist = [1.0] + [0.0] * 9
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        sizer.Add(wx.StaticText(self, -1, "Amplitudes des polynômes"), 0, 
+                                wx.ALIGN_CENTER_HORIZONTAL|wx.BOTTOM|wx.TOP, 5)
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p1 = LabelKnob(self, " T1 ", mini=-1, maxi=1, init=1, outFunction=self.setT1)
+        self.p2 = LabelKnob(self, " T2 ", mini=-1, maxi=1, init=0, outFunction=self.setT2)
+        self.p3 = LabelKnob(self, " T3 ", mini=-1, maxi=1, init=0, outFunction=self.setT3)
+        self.p4 = LabelKnob(self, " T4 ", mini=-1, maxi=1, init=0, outFunction=self.setT4)
+        self.p5 = LabelKnob(self, " T5 ", mini=-1, maxi=1, init=0, outFunction=self.setT5)
+        box1.AddMany([(self.p1, 1), (self.p2, 1), (self.p3, 1), (self.p4, 1), (self.p5, 1)])
+
+        box2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p6 = LabelKnob(self, " T6 ", mini=-1, maxi=1, init=0, outFunction=self.setT6)
+        self.p7 = LabelKnob(self, " T7 ", mini=-1, maxi=1, init=0, outFunction=self.setT7)
+        self.p8 = LabelKnob(self, " T8 ", mini=-1, maxi=1, init=0, outFunction=self.setT8)
+        self.p9 = LabelKnob(self, " T9 ", mini=-1, maxi=1, init=0, outFunction=self.setT9)
+        self.p10 = LabelKnob(self, " T10", mini=-1, maxi=1, init=0, outFunction=self.setT10)
+        box2.AddMany([(self.p6, 1), (self.p7, 1), (self.p8, 1), (self.p9, 1), (self.p10, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 0)
+        sizer.AddSpacer(10)
+        sizer.Add(box2, 0, wx.EXPAND | wx.ALL, 0)
+
+        self.SetSizer(sizer)
+
+    def onStart(self):
+        self.table.view(title="Fonction de transfert")
+
+    def onEnd(self):
+        self.table.viewFrame.Destroy()
+        self.table._setViewFrame(None)
+
+    def setT1(self, value):
+        self.amplist[0] = value
+
+    def setT2(self, value):
+        self.amplist[1] = value
+        self.table.replace(self.amplist)
+
+    def setT3(self, value):
+        self.amplist[2] = value
+        self.table.replace(self.amplist)
+
+    def setT4(self, value):
+        self.amplist[3] = value
+        self.table.replace(self.amplist)
+
+    def setT5(self, value):
+        self.amplist[4] = value
+        self.table.replace(self.amplist)
+
+    def setT6(self, value):
+        self.amplist[5] = value
+        self.table.replace(self.amplist)
+
+    def setT7(self, value):
+        self.amplist[6] = value
+        self.table.replace(self.amplist)
+
+    def setT8(self, value):
+        self.amplist[7] = value
+        self.table.replace(self.amplist)
+
+    def setT9(self, value):
+        self.amplist[8] = value
+        self.table.replace(self.amplist)
+
+    def setT10(self, value):
+        self.amplist[9] = value
+        self.table.replace(self.amplist)
+
+    def processing(self):
+        self.table = ChebyTable(size=1024)
+        self.table.autoNormalize(True)
+        self.output = Lookup(self.table, self.inputpanel.output, mul=0.707)
+        self.display = self.output
+
+class DistoFuncModule(wx.Panel):
+    """
+    Module: 08-Algorithmes de distorsion
+    ------------------------------------
+
+    Ce module permet de comparer quatre différents algorithmes de distorsion.
+
+    Les algorithmes possibles sont:
+        - Clipping: Une coupure abrupte du signal, positif et négatif, en
+                    fonction d'un seuil donné. L'amplitude du signal de sortie
+                    est réajusté en le multipliant par l'inverse du seuil.
+        - Redresseur d'onde: La partie négative du signal est rabattue dans
+                             le positif en fonction du paramètre "drive".
+                             drive = 0   : Aucune distorsion
+                             drive = 0.5 : Redresseur demi-onde
+                             drive = 1   : Redresseur pleine onde
+        - Arctangente: Distorsion à l'aide d'une fonction arctangente.
+        - Waveshaper: Une distorsion économique en temps de calcul (elle ne
+                      contient pas de fonction trigonométrique) et qui offre
+                      une progression intéressante de la fonction de transfert.
+
+    Contrôles:
+        Choix de la distorsion:
+            Permet de choisir l'algorithme de distorsion désiré. 
+        Drive:
+            Quantité de distorsion appliquée au signal, varie en fonction
+            de l'algorithme choisi.
+
+    """
+    name = "08-Algorithmes de distorsion"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        choices = ["Clipping", "Redresseur d'onde", "Arctangente", "Waveshaper"]
+
+        distlabel = wx.StaticText(self, -1, "Choix de la distorsion")
+        dist = wx.Choice(self, -1, choices=choices)
+        dist.SetSelection(0)
+        dist.Bind(wx.EVT_CHOICE, self.setDistorsion)
+
+        labeldrv = wx.StaticText(self, -1, "Drive")
+        self.drv = PyoGuiControlSlider(self, 0, 1, 0.5)
+        self.drv.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.drv.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeDrive)
+
+        self.tog = wx.CheckBox(self, -1, "Filtre passe-bas on/off")
+        self.tog.Bind(wx.EVT_CHECKBOX, self.activateLowpass)
+
+        labelcut = wx.StaticText(self, -1, "Fréquence de coupure du filtre")
+        self.cut = PyoGuiControlSlider(self, 100, 20000, 5000, log=True)
+        self.cut.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.cut.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeCutoff)
+
+        sizer.Add(distlabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(dist, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labeldrv, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.drv, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.AddSpacer(10)
+        sizer.Add(self.tog, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(labelcut, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.cut, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def setDistorsion(self, evt):
+        if evt.GetInt() == 0:
+            self.distord.value = self.disto1
+        elif evt.GetInt() == 1:
+            self.distord.value = self.disto2
+        elif evt.GetInt() == 2:
+            self.distord.value = self.disto3
+        elif evt.GetInt() == 3:
+            self.distord.value = self.disto4
+
+    def changeDrive(self, evt):
+        self.drive.value = evt.value
+
+    def activateLowpass(self, evt):
+        self.filtered.interp = evt.GetInt()
+
+    def changeCutoff(self, evt):
+        self.cutoff.value = evt.value
+
+    def processing(self):
+        piOn4 = math.pi / 4
+        self.signal = self.inputpanel.output
+        self.drive = SigTo(0.5, 0.05)
+        self.cutoff = SigTo(5000, 0.05)
+        self.thresh = Clip((1 - self.drive), 0.01, 1)
+        self.disto1 = Max(Min(self.signal, self.thresh), -self.thresh, mul=0.707/self.thresh)
+        self.disto2 = self.signal * (1 - self.drive) + Abs(self.signal) * self.drive
+        self.comp = self.drive * piOn4 + piOn4
+        self.disto3 = Atan2(self.signal, (1 - self.drive) * math.pi, mul=1/self.comp)
+        self.clipped = Clip(self.drive, 0, 0.999)
+        self.k = (2 * self.clipped) / (1.0 - self.clipped)
+        self.disto4 = (1 + self.k) * self.signal / (1 + self.k * Abs(self.signal))
+        self.distord = Sig(self.disto1)
+        self.lowpass = ButLP(self.distord, freq=self.cutoff)
+        self.filtered = Interp(self.distord, self.lowpass, 0)
+        self.output = self.filtered
+        self.display = self.output
+
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
            ReverbModule, PanningModule, HRTFModule, PeakRMSModule,
            EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule,
            AddSynthVarModule, PulseWidthModModule, OscSyncModule, AmpModModule,
-           FreqModModule, AutoModModule]
+           FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule]
