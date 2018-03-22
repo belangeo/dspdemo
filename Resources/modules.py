@@ -2479,6 +2479,12 @@ class ChebyFuncModule(wx.Panel):
         Amplitudes des polynômes (T1 à T10):
             Amplitudes, entre -1 et 1, des 10 premiers polynômes de Chebychev.
             La somme de ces 10 polynômes constituent la fonction de transfert.
+        Volume d'entrée:
+            Volume du signal en entrée de la fonction de transfert. Ce contrôle,
+            lorsque la fonction de normalisation est activée, modifie uniquement
+            le spectre du signal de sortie, sans modifier l'amplitude du son.
+        Activer la normalisation:
+            Active/désactive la fonction de normalisation.
 
     """
     name = "08-Fonctions de Chebychev"
@@ -2515,9 +2521,20 @@ class ChebyFuncModule(wx.Panel):
         self.p10 = LabelKnob(self, " T10", mini=-1, maxi=1, init=0, outFunction=self.setT10)
         box2.AddMany([(self.p6, 1), (self.p7, 1), (self.p8, 1), (self.p9, 1), (self.p10, 1)])
 
+        labelgn = wx.StaticText(self, -1, "Volume d'entrée")
+        self.gn = PyoGuiControlSlider(self, 0.01, 1, 1)
+        self.gn.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.gn.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeGain)
+
+        self.tog = wx.CheckBox(self, -1, "Activer la normalisation")
+        self.tog.Bind(wx.EVT_CHECKBOX, self.activateNorm)
+
         sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 0)
         sizer.AddSpacer(10)
         sizer.Add(box2, 0, wx.EXPAND | wx.ALL, 0)
+        sizer.Add(labelgn, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.gn, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        sizer.Add(self.tog, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
 
         self.SetSizer(sizer)
 
@@ -2567,10 +2584,21 @@ class ChebyFuncModule(wx.Panel):
         self.amplist[9] = value
         self.table.replace(self.amplist)
 
+    def changeGain(self, evt):
+        self.gain.value = evt.value
+            
+    def activateNorm(self, evt):
+        self.normalize.value = evt.GetInt()
+
     def processing(self):
+        self.normalize = SigTo(0, 0.05)
+        self.gain = SigTo(1, 0.05)
         self.table = ChebyTable(size=1024)
         self.table.autoNormalize(True)
-        self.output = Lookup(self.table, self.inputpanel.output, mul=0.707)
+        self.look = Lookup(self.table, self.inputpanel.output*self.gain)
+        self.peak = Clip(Port(PeakAmp(self.look), 0.01, 0.01), 0.01, 1)
+        self.norm = self.look * (1 / self.peak)
+        self.output = Interp(self.look, self.norm, self.normalize, mul=0.707)
         self.display = self.output
 
 class DistoFuncModule(wx.Panel):
@@ -2600,6 +2628,10 @@ class DistoFuncModule(wx.Panel):
         Drive:
             Quantité de distorsion appliquée au signal, varie en fonction
             de l'algorithme choisi.
+        Activer le filtre passe-bas:
+            Active/désactive un filtre passe-bas appliqué après la distorsion.
+        Fréquence de coupure du filtre:
+            Fréquence de coupure, en Hertz, du filtre passe-bas.
 
     """
     name = "08-Algorithmes de distorsion"
@@ -2628,7 +2660,7 @@ class DistoFuncModule(wx.Panel):
         self.drv.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.drv.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeDrive)
 
-        self.tog = wx.CheckBox(self, -1, "Filtre passe-bas on/off")
+        self.tog = wx.CheckBox(self, -1, "Activer le filtre passe-bas")
         self.tog.Bind(wx.EVT_CHECKBOX, self.activateLowpass)
 
         labelcut = wx.StaticText(self, -1, "Fréquence de coupure du filtre")
