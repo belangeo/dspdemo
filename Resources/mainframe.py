@@ -118,6 +118,8 @@ class MainFrame(wx.Frame):
         self.connectModuleToOutput()
 
     def loadModule(self, evt):
+        if hasattr(self.module, "onEnd"):
+            self.module.onEnd()
         index = evt.GetId() - MODULE_FIRST_ID
         oldmodule = self.module
         self.module = MODULES[index](self.panel)
@@ -135,8 +137,12 @@ class MainFrame(wx.Frame):
         num = len(self.module.display)
         for i in range(num):
             self.outdisp[i].setValue(self.module.display[i])
+        if hasattr(self.module, "onStart"):
+            self.module.onStart()
         
     def onQuit(self, evt):
+        if hasattr(self.module, "onEnd"):
+            self.module.onEnd()
         if self.server.getIsStarted():
             self.server.stop()
             time.sleep(0.25)
