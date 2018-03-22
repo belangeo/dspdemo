@@ -2542,8 +2542,9 @@ class ChebyFuncModule(wx.Panel):
         self.table.view(title="Fonction de transfert")
 
     def onEnd(self):
-        self.table.viewFrame.Destroy()
-        self.table._setViewFrame(None)
+        if self.table.viewFrame is not None:
+            self.table.viewFrame.Destroy()
+            self.table._setViewFrame(None)
 
     def setT1(self, value):
         self.amplist[0] = value
