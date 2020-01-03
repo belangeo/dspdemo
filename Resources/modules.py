@@ -2718,9 +2718,153 @@ class DistoFuncModule(wx.Panel):
         self.output = self.filtered
         self.display = self.output
 
+class VocoderModule(wx.Panel):
+    """
+    Module: 09-Vocodeur
+    -------------------
+
+    Ce module illustre le vocodeur dans le domaine temporel.
+
+    Contrôles:
+        Env. spectrale:
+            Permet de choisir le son qui servira d'enveloppe spectrale.
+        Excitation:
+            Permet de choisir le son qui servira d'excitation.
+        Jouer les sons:
+            Active la lecture des sons sources.
+
+    """
+    name = "09-Vocodeur"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Sources Sonores")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        loadbutton = wx.Button(self, -1, "Env. spectrale")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        loadbutton2 = wx.Button(self, -1, "Excitation")
+        loadbutton2.Bind(wx.EVT_BUTTON, self.onLoadSoundfile2)
+        row1.Add(loadbutton2, 1, wx.ALL|wx.EXPAND, 5)
+
+        sizer.Add(row1, 0, wx.EXPAND)
+
+        self.playbutton = wx.ToggleButton(self, -1, "Jouer les sons")
+        self.playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
+        sizer.Add(self.playbutton, 0, wx.ALL|wx.EXPAND, 5)
+
+        sizer.AddSpacer(10)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        sizer.AddSpacer(10)
+
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p1 = LabelKnob(self, " Freq", mini=40, maxi=250, init=100, outFunction=self.setFreq)
+        self.p2 = LabelKnob(self, " Exp.", mini=0.5, maxi=2, init=1.2, outFunction=self.setExp)
+        self.p3 = LabelKnob(self, "  Q ", mini=1, maxi=100, init=20, outFunction=self.setQ)
+        self.p4 = LabelKnob(self, "Pente", mini=0, maxi=1, init=0.5, outFunction=self.setSlope)
+        self.p5 = LabelKnob(self, " Nbrs", mini=2, maxi=64, init=24, integer=True, outFunction=self.setStages)
+        box1.AddMany([(self.p1, 1), (self.p2, 1), (self.p3, 1), (self.p4, 1), (self.p5, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 0)
+
+        labeldb = wx.StaticText(self, -1, "Volume (dB)")
+        self.db = PyoGuiControlSlider(self, -60, 18, 0)
+        self.db.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.db.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeVol)
+
+        sizer.Add(labeldb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.db, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.freq = self.soundtable.getRate()
+
+        dlg.Destroy()
+
+    def onLoadSoundfile2(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'excitation",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable2.setSound(path)
+                self.soundfile2.freq = self.soundtable2.getRate()
+
+        dlg.Destroy()
+
+    def onPlaySoundfile(self, evt):
+        if evt.GetInt():
+            self.soundfile.play()
+            self.soundfile2.play()
+        else:
+            self.soundfile.stop()
+            self.soundfile2.stop()
+
+    def setFreq(self, value):
+        self.freq.value = value
+
+    def setExp(self, value):
+        self.exp.value = value
+
+    def setQ(self, value):
+        self.q.value = value
+
+    def setSlope(self, value):
+        self.slope.value = value
+
+    def setStages(self, value):
+        self.output.stages = value
+
+    def changeVol(self, evt):
+        self.gain.value = pow(10, evt.value * 0.05)
+
+    def processing(self):
+        self.gain = SigTo(1, 0.05, mul=0.25)
+        self.fade = Fader(fadein=1, mul=self.gain).play()
+        self.freq = SigTo(100, 0.05)
+        self.exp = SigTo(1.2, 0.05)
+        self.q = SigTo(20, 0.05)
+        self.slope = SigTo(0.5, 0.05)
+
+        # Soundfile player 1
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = TableRead(self.soundtable, freq=1, loop=1, interp=4)
+        self.soundfilemono = self.soundfile.mix()
+        # Soundfile player 2
+        self.soundtable2 = SndTable(initchnls=2)
+        self.soundfile2 = TableRead(self.soundtable2, freq=1, loop=1, interp=4)
+        self.soundfilemono2 = self.soundfile2.mix()
+
+        self.output = Vocoder(self.soundfilemono, self.soundfilemono2, freq=self.freq,
+                              spread=self.exp, q=self.q, slope=self.slope, mul=self.fade)
+        self.display = self.output
+
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
            ReverbModule, PanningModule, HRTFModule, PeakRMSModule,
            EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule,
            AddSynthVarModule, PulseWidthModModule, OscSyncModule, AmpModModule,
-           FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule]
+           FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule, VocoderModule]
