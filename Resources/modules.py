@@ -1180,13 +1180,16 @@ class PanningModule(wx.Panel):
         self.output = InputFader(self.pan1)
         self.display = self.output
 
-class HRTFModule(wx.Panel):
+class BinauralModule(wx.Panel):
     """
-    Module: 04-HRTF Spatialisation 3D
-    ---------------------------------
+    Module: 04-Binaural Spatialisation 3D
+    -------------------------------------
 
     Ce module permet d'expérimenter avec la panoramisation 3D en
-    stéréo avec l'algorithme HRTF (Head-Related Transfert Function).
+    stéréo à l'aide des algorithmes VBAP (Vector-Based Amplitude
+    Panning), pour les déplacements de la source, et HRTF 
+    (Head-Related Transfert Function), pour la simulation du 
+    filtrage causé par les oreilles, la tête, les épaules, etc.
     Les réponses impulsionnelles proviennent de Gardner et Martin
     du MIT Media Lab:
 
@@ -1195,12 +1198,8 @@ class HRTFModule(wx.Panel):
     On contrôle la position de la source est spécifiant ses
     coordonnées en azimuth et en élévation.
 
-    Cet algorithme utilise une banque de filtres pré-enregistrés
-    pour simuler les effets spectraux de la tête, des oreilles et
-    des épaules sur la perception du son. Observez, avec un bruit
-    blanc par exemple, comme le spectre de la source change lorsque
-    la position change. Pour entendre l'effet HRTF, il est préférable
-    d'en faire l'écoute aux écouteurs!
+    Pour bien entendre l'effet Binaural des filtres HRTF, il est
+    préférable d'en faire l'écoute aux écouteurs!
 
     Contrôles:
         Position en azimuth:
@@ -1212,12 +1211,12 @@ class HRTFModule(wx.Panel):
         Position en élévation:
             Contrôle la position de la source en élévation (plan
             vertical). La position est donnée en degrés, entre
-            -40 et 90 degrés. 0 degrés signifie que le son est
+            0 et 90 degrés. 0 degrés signifie que le son est
             au niveau des oreilles et à 90 degrés, le son est
             au dessus de la tête.
 
     """
-    name = "04-HRTF Spatialisation 3D"
+    name = "04-Binaural Spatialisation 3D"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1237,7 +1236,7 @@ class HRTFModule(wx.Panel):
         self.az.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeAzimuth)
 
         labelel = wx.StaticText(self, -1, "Position en élévation")
-        self.el = PyoGuiControlSlider(self, -40, 90, 0.0, log=False)
+        self.el = PyoGuiControlSlider(self, 0, 90, 0.0, log=False)
         self.el.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.el.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeElevation)
 
@@ -1255,11 +1254,9 @@ class HRTFModule(wx.Panel):
         self.elevation.value = evt.value
 
     def processing(self):
-        self.hrtfdata = HRTFData(os.path.join(RESOURCES_PATH, "hrtf_compact"))
         self.azimuth = SigTo(0.0, 0.05)
         self.elevation = SigTo(0.0, 0.05)
-        self.output = HRTF(self.inputpanel.output, self.azimuth, self.elevation,
-                           self.hrtfdata)
+        self.output = Binaural(self.inputpanel.output, self.azimuth, self.elevation)
         self.display = self.output
 
 class PeakRMSModule(wx.Panel):
@@ -2864,7 +2861,7 @@ class VocoderModule(wx.Panel):
 
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
-           ReverbModule, PanningModule, HRTFModule, PeakRMSModule,
+           ReverbModule, PanningModule, BinauralModule, PeakRMSModule,
            EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule,
            AddSynthVarModule, PulseWidthModModule, OscSyncModule, AmpModModule,
            FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule, VocoderModule]
