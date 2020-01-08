@@ -54,7 +54,7 @@ class DSPDemoBLOsc(PyoObject):
     >>> blo = BLOsc(freq=200, bright=bright, shape=shape, mul=0.3).out()
     
     """
-    def __init__(self, freq=100, bright=1, shape=0, mul=1, add=0):
+    def __init__(self, freq=86, bright=1, shape=0, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         # Raw arguments so that we can retrieve them with the attribute syntax.
         self._freq = freq
@@ -315,7 +315,7 @@ class TriTable(PyoTableObject):
 class AdditivePartial:
     def __init__(self):
         self.env = Adsr(attack=0.01, decay=0.1, sustain=0.7, release=0.5, dur=0)
-        self.freq = SigTo(200, time=0.001)
+        self.freq = SigTo(172, time=0.001)
         self.ampi = Randi(-1, 1, 1)
         self.amph = Randh(-1, 1, 1)
         self.ampn = BrownNoise()
@@ -359,7 +359,7 @@ class AdditivePartial:
 
 class AdditiveSynthesis:
     def __init__(self, partials=30, attack=0.01, decay=0.1, sustain=0.7, release=0.5,
-                 adamp=0.9, tdamp=0.9, freq=200, spread=1, avara=0, avarf=1,
+                 adamp=0.9, tdamp=0.9, freq=172, spread=1, avara=0, avarf=1,
                  avart=0, fvara=0, fvarf=1, fvart=0, wave=0):
         self.partials = partials
         self.attack = attack
@@ -499,7 +499,7 @@ class PWM(PyoObject):
     >>> pwm = PWM(freq=100, phase=0, duty=duty, damp=6, mul=0.3).out()
     
     """
-    def __init__(self, freq=100, phase=0, duty=0.5, damp=0, mul=1, add=0):
+    def __init__(self, freq=86, phase=0, duty=0.5, damp=0, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         # Raw arguments so that we can retrieve them with the attribute syntax.
         self._freq = freq
@@ -665,7 +665,7 @@ class OscSync(PyoObject):
     >>> sosc = OscSync(table, master, slave, xfade=0.5, mul=0.3).out()
     
     """
-    def __init__(self, table, master=100, slave=110, xfade=0.5, mul=1, add=0):
+    def __init__(self, table, master=86, slave=90, xfade=0.5, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         # Raw arguments so that we can retrieve them with the attribute syntax.
         self._table = table

@@ -2499,7 +2499,7 @@ class AddSynthFixModule(wx.Panel):
         type.Bind(wx.EVT_CHOICE, self.changeWaveType)
 
         labelfr = wx.StaticText(self, -1, "Fréquence fondamentale")
-        self.fr = PyoGuiControlSlider(self, 40, 4000, 250, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 4000, 172, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
 
@@ -2537,7 +2537,7 @@ class AddSynthFixModule(wx.Panel):
         self.freq.value = evt.value
 
     def processing(self):
-        self.freq = SigTo(250, 0.05)
+        self.freq = SigTo(172, 0.05)
         self.sawtable = SawTable(10)
         self.sqrtable = SquareTable(10)
         self.tritable = TriTable(10)
@@ -2671,7 +2671,7 @@ class AddSynthVarModule(wx.Panel):
         box3 = wx.BoxSizer(wx.HORIZONTAL)
         funbox = wx.BoxSizer(wx.VERTICAL)
         labfun = wx.StaticText(self, -1, "Fondamentale")
-        self.fun = PyoGuiControlSlider(self, 40, 4000, 200, log=True, size=(120,16))
+        self.fun = PyoGuiControlSlider(self, 40, 4000, 172, log=True, size=(120,16))
         self.fun.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fun.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.setFreq)
         funbox.Add(labfun, 0, wx.LEFT|wx.TOP, 5)
@@ -2834,7 +2834,7 @@ class PulseWidthModModule(wx.Panel):
         sizer.Add(head, 0, wx.EXPAND)
 
         labelfr = wx.StaticText(self, -1, "Fréquence fondamentale en Hz")
-        self.fr = PyoGuiControlSlider(self, 40, 2000, 250, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 172, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
 
@@ -2867,7 +2867,7 @@ class PulseWidthModModule(wx.Panel):
         self.output.damp = int(evt.value)
 
     def processing(self):
-        self.freq = SigTo(250, 0.05)
+        self.freq = SigTo(172, 0.05)
         self.duty = SigTo(0.5, 0.05)
         self.output = PWM(self.freq, 0, self.duty, 0)
         self.display = self.output
@@ -2939,12 +2939,12 @@ class OscSyncModule(wx.Panel):
         sizer.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
 
         labelfr = wx.StaticText(self, -1, "Fréquence maître en Hz")
-        self.fr = PyoGuiControlSlider(self, 40, 2000, 100, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 86, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
 
         labelfr2 = wx.StaticText(self, -1, "Fréquence esclave en Hz")
-        self.fr2 = PyoGuiControlSlider(self, 40, 2000, 110, log=True)
+        self.fr2 = PyoGuiControlSlider(self, 40, 2000, 90, log=True)
         self.fr2.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr2.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSlave)
 
@@ -2978,8 +2978,8 @@ class OscSyncModule(wx.Panel):
         self.tables = [HarmTable(), SawTable(5), SawTable(15), SawTable(30), SawTable(60),
                       SquareTable(5), SquareTable(15), SquareTable(30), SquareTable(60),
                       TriTable(3), TriTable(6), TriTable(12), TriTable(24)]
-        self.freq = SigTo(100, 0.05)
-        self.slave = SigTo(110, 0.05)
+        self.freq = SigTo(86, 0.05)
+        self.slave = SigTo(90, 0.05)
         self.xfade = SigTo(0, 0.05)
         self.output = OscSync(self.tables[0], self.freq, self.slave, self.xfade)
         self.display = self.output
@@ -3040,12 +3040,12 @@ class AmpModModule(wx.Panel):
         sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
 
         labelfr = wx.StaticText(self, -1, "Fréquence porteuse")
-        self.fr = PyoGuiControlSlider(self, 40, 2000, 400, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 344, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePortFreq)
 
         labelfr2 = wx.StaticText(self, -1, "Fréquence modulante")
-        self.fr2 = PyoGuiControlSlider(self, 1, 2000, 200, log=True)
+        self.fr2 = PyoGuiControlSlider(self, 1, 2000, 172, log=True)
         self.fr2.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr2.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeModFreq)
 
@@ -3097,8 +3097,8 @@ class AmpModModule(wx.Panel):
         self.tables = [HarmTable(), SawTable(2), SawTable(5), SawTable(10), SawTable(20),
                       SquareTable(2), SquareTable(5), SquareTable(10), SquareTable(20),
                       TriTable(2), TriTable(5), TriTable(10), TriTable(20)]
-        self.freq = SigTo(400, 0.05)
-        self.freq2 = SigTo(200, 0.05)
+        self.freq = SigTo(344, 0.05)
+        self.freq2 = SigTo(172, 0.05)
         self.mod = Osc(self.tables[0], self.freq2, mul=1-self.scaling, add=self.scaling)
         self.port = Osc(self.tables[0], self.freq)
         self.output = self.port * self.mod * 0.707
@@ -3151,7 +3151,7 @@ class FreqModModule(wx.Panel):
         sizer.Add(head, 0, wx.EXPAND)
 
         labelfr = wx.StaticText(self, -1, "Fréquence porteuse")
-        self.fr = PyoGuiControlSlider(self, 40, 5000, 400, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 5000, 344, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePortFreq)
 
@@ -3214,9 +3214,9 @@ class FreqModModule(wx.Panel):
         self.tables = [HarmTable(), SawTable(2), SawTable(5), SawTable(10), SawTable(20),
                       SquareTable(2), SquareTable(5), SquareTable(10), SquareTable(20),
                       TriTable(2), TriTable(5), TriTable(10), TriTable(20)]
-        self.freq = SigTo(400, 0.05)
-        self.ratio = SigTo(200, 0.05)
-        self.index = SigTo(200, 0.05)
+        self.freq = SigTo(344, 0.05)
+        self.ratio = SigTo(1, 0.05)
+        self.index = SigTo(5, 0.05)
         self.modfreq = self.freq / self.ratio
         self.modamp = self.modfreq * self.index
         self.mod = Osc(self.tables[0], self.modfreq, mul=self.modamp)
@@ -3261,7 +3261,7 @@ class AutoModModule(wx.Panel):
         sizer.Add(head, 0, wx.EXPAND)
 
         labelfr = wx.StaticText(self, -1, "Fréquence porteuse")
-        self.fr = PyoGuiControlSlider(self, 40, 2000, 200, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 172, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePortFreq)
 
@@ -3285,7 +3285,7 @@ class AutoModModule(wx.Panel):
 
     def processing(self):
         self.table = HarmTable(size=32768)
-        self.freq = SigTo(200, 0.05)
+        self.freq = SigTo(172, 0.05)
         self.index = SigTo(0.1, 0.05, mul=0.17)
         self.port = OscLoop(self.table, self.freq, feedback=self.index, mul=0.707)
         self.output = self.display = self.port
