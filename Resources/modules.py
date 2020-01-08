@@ -2869,7 +2869,7 @@ class PulseWidthModModule(wx.Panel):
     def processing(self):
         self.freq = SigTo(172, 0.05)
         self.duty = SigTo(0.5, 0.05)
-        self.output = PWM(self.freq, 0, self.duty, 0)
+        self.output = PWM(self.freq, 0, self.duty, 0, mul=0.5)
         self.display = self.output
 
 class OscSyncModule(wx.Panel):
