@@ -2,6 +2,7 @@ import os
 import math
 import wx
 from pyo64 import *
+from pyo.lib._wxwidgets import DataMultiSlider
 from .constants import *
 from .widgets import HeadTitle, LabelKnob
 from .bandlimited import DSPDemoBLOsc, SchroederVerb1, SchroederVerb2, AdditiveSynthesis, TriTable, PWM, OscSync
@@ -23,11 +24,11 @@ class InputPanel(wx.Choicebook):
 
         ### Audio processing ###
         # Multi-waveforms oscillator
-        self.lfofreq = SigTo(250, 0.05)
+        self.lfofreq = SigTo(172, 0.05)
         self.lfooscil = LFO(freq=self.lfofreq, sharp=0.0, type=7)
 
         # Band-limited oscillator
-        self.oscfreq = SigTo(250, 0.05)
+        self.oscfreq = SigTo(172, 0.05)
         self.oscbright = SigTo(0.5, 0.05)
         self.oscshape = SigTo(0.25, 0.05)
         self.oscillator = DSPDemoBLOsc(freq=self.oscfreq, bright=self.oscbright,
@@ -71,7 +72,7 @@ class InputPanel(wx.Choicebook):
 
         pitbox = wx.BoxSizer(wx.VERTICAL)
         labelpit = wx.StaticText(panel, -1, "Fréquence")
-        self.opit = PyoGuiControlSlider(panel, 20, 4000, 250, log=True)
+        self.opit = PyoGuiControlSlider(panel, 20, 4000, 172, log=True)
         self.opit.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.opit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onLFOFreq)
         sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
@@ -105,7 +106,7 @@ class InputPanel(wx.Choicebook):
 
         pitbox = wx.BoxSizer(wx.VERTICAL)
         labelpit = wx.StaticText(panel, -1, "Fréquence")
-        self.opit = PyoGuiControlSlider(panel, 20, 4000, 250, log=True)
+        self.opit = PyoGuiControlSlider(panel, 20, 4000, 172, log=True)
         self.opit.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.opit.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.onOscillatorFreq)
         sizer.Add(labelpit, 0, wx.LEFT|wx.TOP, 5)
@@ -1552,26 +1553,45 @@ class CompressModule(wx.Panel):
                                self.rise, self.fall, mul=DBToA(self.gain))
         self.display = self.output
 
+# Not used yet.
 class MBCompressModule(wx.Panel):
     """
     Module: 05-Compresseur Multi-Bande
     ----------------------------------
 
-    Ce module permet d'expérimenter avec la panoramisation 3D en
+    Ce module permet d'expérimenter avec la compression multi-bande.
+
+    Pour chacune des quatre bandes de fréquence, lorsque le suivi d'amplitude
+    du signal passe au-dessus du seuil spécifé, le signal est compressé en 
+    fonction du ratio de compression. Lorsque le suivi d'amplitude est sous 
+    le seuil, le signal passe sans modification.
+
+    La plage de fréquence des quatre bandes est:
+
+        basse: 0 - 150 Hz
+        mid-basse: 150 - 600 Hz
+        mid-haute: 600 - 3200 Hz
+        haute: 3200 Hz et plus
+
+    Avec un seuil près de 0 dB et un ratio très élevé (entre 50 et 100), un
+    compresseur agit comme un limiteur.
 
     Contrôles:
-        Position en azimuth:
-            Contrôle la position de la source en azimuth (plan
-            horizontal). La position est donnée en degrés, entre
-            -180 et 180 degrés. -90 signifie que le son est
-            complètement à gauche et à 90 degrés, le son est
-            complètement à droite.
-        Position en élévation:
-            Contrôle la position de la source en élévation (plan
-            vertical). La position est donnée en degrés, entre
-            -40 et 90 degrés. 0 degrés signifie que le son est
-            au niveau des oreilles et à 90 degrés, le son est
-            au dessus de la tête.
+        Seuil en dB:
+            Seuil, en décibels, au-dessus duquel le signal est compressé.
+        Ratio de compression:
+            Rapport entre le gain du signal en entré et en sortie du
+            compresseur. Un ratio de 2 signifie que pour 2 décibels
+            au-dessus du seuil en entrée, l'amplitude du signal en sortie
+            sera de seulement 1 décibel au-dessus du seuil.
+        Temps d'attaque en seconde:
+            Durée, en seconde, que prend le compresseur pour atteindre son
+            plein niveau de compression lorsque le suivi d'amplitude passe
+            au-dessus du seuil.
+        Temps de relâche en seconde:
+            Durée, en seconde, que prend le compresseur pour arrêter de
+            compresser lorsque le suivi d'amplitude passe au-dessous du
+            seuil.
 
     """
     name = "05-Compresseur Multi-Bande"
@@ -1618,9 +1638,821 @@ class MBCompressModule(wx.Panel):
         self.output = Compress(self.split, thresh=self.thresh1, ratio=self.ratio1, knee=0.5, mul=self.gain1).mix(1)
         self.display = self.output
 
+class VocoderModule(wx.Panel):
+    """
+    Module: 06-Vocodeur
+    -------------------
+
+    Ce module illustre le vocodeur dans le domaine temporel.
+
+    Un vocodeur comprend une partie « analyseur » et une partie « synthétiseur ».
+    Un suivi d'amplitude est appliqué à différentes tranches de fréquence dans la
+    « analyseur » et le résultat est utilisé pour moduler l'amplitude des tranches
+    de fréquences respectives dans la partie « synthétiseur ».
+
+    Contrôles:
+        Freq:
+            Fréquence de base pour la séparation en tranche de fréquence.
+        Exp:
+            Facteur d'expansion appliqué aux fréquences successives (en 
+            commençant par la fréquence de base) pour déterminer la fréquence
+            centrale des filtres passe-bande.
+        Q:
+            Facteur de qualité des filtres (largeur de bande = fréquence centrale
+            divisée par le facteur de qualité).
+        Pente:
+            Réactivité des suivis d'amplitude. Plus cette valeur est élevé, plus les
+            suivis sont précis dans le temps.
+        Nbrs:
+            Nombre de filtres passe-bande constituant le vocodeur.
+
+    """
+    name = "06-Vocodeur"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Sources Sonores")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        loadbutton = wx.Button(self, -1, "Enveloppe")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        loadbutton2 = wx.Button(self, -1, "Excitation")
+        loadbutton2.Bind(wx.EVT_BUTTON, self.onLoadSoundfile2)
+        row1.Add(loadbutton2, 1, wx.ALL|wx.EXPAND, 5)
+
+        sizer.Add(row1, 0, wx.EXPAND)
+
+        self.playbutton = wx.ToggleButton(self, -1, "Jouer les sons")
+        self.playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
+        sizer.Add(self.playbutton, 0, wx.ALL|wx.EXPAND, 5)
+
+        sizer.AddSpacer(10)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        sizer.AddSpacer(10)
+
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p1 = LabelKnob(self, " Freq", mini=40, maxi=250, init=100, outFunction=self.setFreq)
+        self.p2 = LabelKnob(self, " Exp.", mini=0.5, maxi=2, init=1.2, outFunction=self.setExp)
+        self.p3 = LabelKnob(self, "  Q ", mini=1, maxi=100, init=20, outFunction=self.setQ)
+        self.p4 = LabelKnob(self, "Pente", mini=0, maxi=1, init=0.5, outFunction=self.setSlope)
+        self.p5 = LabelKnob(self, " Nbrs", mini=2, maxi=64, init=24, integer=True, outFunction=self.setStages)
+        box1.AddMany([(self.p1, 1), (self.p2, 1), (self.p3, 1), (self.p4, 1), (self.p5, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 0)
+
+        labeldb = wx.StaticText(self, -1, "Volume (dB)")
+        self.db = PyoGuiControlSlider(self, -60, 18, 0)
+        self.db.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.db.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeVol)
+
+        sizer.Add(labeldb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.db, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.freq = self.soundtable.getRate()
+
+        dlg.Destroy()
+
+    def onLoadSoundfile2(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'excitation",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable2.setSound(path)
+                self.soundfile2.freq = self.soundtable2.getRate()
+
+        dlg.Destroy()
+
+    def onPlaySoundfile(self, evt):
+        if evt.GetInt():
+            self.soundfile.play()
+            self.soundfile2.play()
+        else:
+            self.soundfile.stop()
+            self.soundfile2.stop()
+
+    def setFreq(self, value):
+        self.freq.value = value
+
+    def setExp(self, value):
+        self.exp.value = value
+
+    def setQ(self, value):
+        self.q.value = value
+
+    def setSlope(self, value):
+        self.slope.value = value
+
+    def setStages(self, value):
+        self.output.stages = value
+
+    def changeVol(self, evt):
+        self.gain.value = pow(10, evt.value * 0.05)
+
+    def processing(self):
+        self.gain = SigTo(1, 0.05, mul=0.25)
+        self.fade = Fader(fadein=1, mul=self.gain).play()
+        self.freq = SigTo(100, 0.05)
+        self.exp = SigTo(1.2, 0.05)
+        self.q = SigTo(20, 0.05)
+        self.slope = SigTo(0.5, 0.05)
+
+        # Soundfile player 1
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = TableRead(self.soundtable, freq=1, loop=1, interp=4)
+        self.soundfilemono = self.soundfile.mix()
+        # Soundfile player 2
+        self.soundtable2 = SndTable(initchnls=2)
+        self.soundfile2 = TableRead(self.soundtable2, freq=1, loop=1, interp=4)
+        self.soundfilemono2 = self.soundfile2.mix()
+
+        self.output = Vocoder(self.soundfilemono, self.soundfilemono2, freq=self.freq,
+                              spread=self.exp, q=self.q, slope=self.slope, mul=self.fade)
+        self.display = self.output
+
+class SpectralFilterModule(wx.Panel):
+    """
+    Module: 06-Filtre Spectral
+    --------------------------
+
+    Ce module permet d'expérimenter avec le filtrage dans le 
+    domaine spectral.
+
+    Une analyse FFT est d'abord effectuée sur le signal et le 
+    volume de chacune des tranches de fréquence peut ensuite
+    être contrôlé indépendamment à l'aide d'un graphique à bande.
+
+    Contrôles:
+        Taille FFT:
+            Nombre de points dans l'analyse FFT. Le spectre entre
+            0 et la fréquence d'échantillonnage sera séparé en
+            autant de tranches. Le nombre de tranches effectives
+            est donc `taille FFT / 2`, c'est-à-dire les tranches
+            entre 0 et la fréquence de Nyquist.
+        Chevauchements:
+            Le nombre d'analyses qui se chevauchent sur la durée
+            correspondant à la taille FFT. Pour certain effets 
+            (en particulier la transposition et l'expansion 
+            temporelle), plus cette valeur est élevé, plus le rendu
+            sonore est de qualité. 
+        Fenêtre:
+            Le type de fenêtre appliqué avant et après l'analyse, afin
+            d'éliminer les artefacts dans le rendu sonore.
+        Dessiner le filtre (256 points):
+            Les volume individuels des 256 premières tranches de 
+            fréquence (0 à Nyquist pour une taille de 512).
+
+    """
+    name = "06-Filtre Spectral"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        self.inputpanel = InputPanel(self)
+        sizer.Add(self.inputpanel, 0, wx.EXPAND)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        # FFT properties widgets #
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizeBox = wx.BoxSizer(wx.VERTICAL)
+        sizelabel = wx.StaticText(self, -1, "Taille FFT")
+        sizeChoice = wx.Choice(self, -1, choices=SIZECHOICES)
+        sizeChoice.SetSelection(4)
+        sizeChoice.Bind(wx.EVT_CHOICE, self.changeSize)
+        sizeBox.AddMany([(sizelabel, 0, wx.EXPAND), (sizeChoice, 0, wx.EXPAND)])
+
+        overBox = wx.BoxSizer(wx.VERTICAL)
+        overlabel = wx.StaticText(self, -1, "Chevauchements")
+        overChoice = wx.Choice(self, -1, choices=OVERLAPS)
+        overChoice.SetSelection(1)
+        overChoice.Bind(wx.EVT_CHOICE, self.changeOver)
+        overBox.AddMany([(overlabel, 0, wx.EXPAND), (overChoice, 0, wx.EXPAND)])
+
+        typelabel = wx.StaticText(self, -1, "Fenêtre")
+        type = wx.Choice(self, -1, choices=WINCHOICES)
+        type.SetSelection(2)
+        type.Bind(wx.EVT_CHOICE, self.changeType)
+
+        box1.AddMany([(sizeBox, 1, wx.ALL, 1), (overBox, 1, wx.ALL, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 4)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        # FFT properties widgets #
+
+        box2 = wx.BoxSizer(wx.VERTICAL)
+        graphLabel = wx.StaticText(self, -1, label="Dessiner le filtre (256 points)")
+        grapher = DataMultiSlider(self, [0.0 for i in range(256)], outFunction=self.changeFilter)
+        box2.AddMany([(graphLabel, 0), (grapher, 0, wx.EXPAND)])
+
+        sizer.Add(box2, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.SetSizer(sizer)
+
+    def changeSize(self, evt):
+        newsize = int(evt.GetString())
+        self.pva.size = newsize
+
+    def changeOver(self, evt):
+        newolaps = int(evt.GetString())
+        self.pva.overlaps = newolaps
+
+    def changeType(self, evt):
+        newtype = evt.GetInt()
+        self.pva.wintype = newtype
+        self.output.wintype = newtype
+
+    def changeFilter(self, values):
+        if hasattr(self, "table"):
+            self.table.replace(values)
+
+    def processing(self):
+        self.table = DataTable(256)
+        self.pva = PVAnal(self.inputpanel.output)
+        self.pvf = PVFilter(self.pva, self.table)
+        self.output = PVSynth(self.pvf)
+        self.display = self.output
+
+class CrossSynthModule(wx.Panel):
+    """
+    Module: 06-Synthèse croisée
+    ---------------------------
+
+    Ce module permet d'expérimenter avec la synthèse croisée dans
+    le domaine spectral.
+
+    Une analyse FFT est d'abord effectuée sur deux signaux puis leurs
+    spectres sont ensuite multipliés afin d'appliquer le profil spectral
+    du premier son sur le contenu fréquentiel du second.
+
+    Contrôles:
+        Enveloppe:
+            Permet de choisir la première source sonore (enveloppe spectrale).
+            Ce signal doit généralement être dynamique, tant au niveau
+            des fréquences que de l'amplitude.
+        Excitation:
+            Permet de choisir la seconde source sonore.
+            Ce signal doit généralement être riche en contenu fréquentiel
+            et stable au niveau des amplitudes.
+        Jouer les sons:
+            Lance la lecture des sons.
+        Taille FFT:
+            Nombre de points dans l'analyse FFT. Le spectre entre
+            0 et la fréquence d'échantillonnage sera séparé en
+            autant de tranches. Le nombre de tranches effectives
+            est donc `taille FFT / 2`, c'est-à-dire les tranches
+            entre 0 et la fréquence de Nyquist.
+        Chevauchements:
+            Le nombre d'analyses qui se chevauchent sur la durée
+            correspondant à la taille FFT. Pour certain effets 
+            (en particulier la transposition et l'expansion 
+            temporelle), plus cette valeur est élevé, plus le rendu
+            sonore est de qualité. 
+        Fenêtre:
+            Le type de fenêtre appliqué avant et après l'analyse, afin
+            d'éliminer les artefacts dans le rendu sonore.
+        Volume (dB):
+            Permet d'ajuster le volume après la synthèse croisée.
+
+    """
+    name = "06-Synthèse croisée"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Sources Sonores")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        loadbutton = wx.Button(self, -1, "Enveloppe")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
+
+        loadbutton2 = wx.Button(self, -1, "Excitation")
+        loadbutton2.Bind(wx.EVT_BUTTON, self.onLoadSoundfile2)
+        row1.Add(loadbutton2, 1, wx.ALL|wx.EXPAND, 5)
+
+        sizer.Add(row1, 0, wx.EXPAND)
+
+        self.playbutton = wx.ToggleButton(self, -1, "Jouer les sons")
+        self.playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
+        sizer.Add(self.playbutton, 0, wx.ALL|wx.EXPAND, 5)
+
+        sizer.AddSpacer(10)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        # FFT properties widgets #
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizeBox = wx.BoxSizer(wx.VERTICAL)
+        sizelabel = wx.StaticText(self, -1, "Taille FFT")
+        sizeChoice = wx.Choice(self, -1, choices=SIZECHOICES)
+        sizeChoice.SetSelection(4)
+        sizeChoice.Bind(wx.EVT_CHOICE, self.changeSize)
+        sizeBox.AddMany([(sizelabel, 0, wx.EXPAND), (sizeChoice, 0, wx.EXPAND)])
+
+        overBox = wx.BoxSizer(wx.VERTICAL)
+        overlabel = wx.StaticText(self, -1, "Chevauchements")
+        overChoice = wx.Choice(self, -1, choices=OVERLAPS)
+        overChoice.SetSelection(1)
+        overChoice.Bind(wx.EVT_CHOICE, self.changeOver)
+        overBox.AddMany([(overlabel, 0, wx.EXPAND), (overChoice, 0, wx.EXPAND)])
+
+        typelabel = wx.StaticText(self, -1, "Fenêtre")
+        type = wx.Choice(self, -1, choices=WINCHOICES)
+        type.SetSelection(2)
+        type.Bind(wx.EVT_CHOICE, self.changeType)
+
+        box1.AddMany([(sizeBox, 1, wx.ALL, 1), (overBox, 1, wx.ALL, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 4)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        # FFT properties widgets #
+
+        labeldb = wx.StaticText(self, -1, "Volume (dB)")
+        self.db = PyoGuiControlSlider(self, -60, 18, 0)
+        self.db.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.db.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeVol)
+
+        sizer.Add(labeldb, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.db, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable2.setSound(path)
+                self.soundfile2.freq = self.soundtable2.getRate()
+
+        dlg.Destroy()
+
+    def onLoadSoundfile2(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'excitation",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.freq = self.soundtable.getRate()
+
+        dlg.Destroy()
+
+    def onPlaySoundfile(self, evt):
+        if evt.GetInt():
+            self.soundfile.play()
+            self.soundfile2.play()
+        else:
+            self.soundfile.stop()
+            self.soundfile2.stop()
+
+    def changeSize(self, evt):
+        newsize = int(evt.GetString())
+        self.pva.size = newsize
+        self.pva2.size = newsize
+
+    def changeOver(self, evt):
+        newolaps = int(evt.GetString())
+        self.pva.overlaps = newolaps
+        self.pva2.overlaps = newolaps
+
+    def changeType(self, evt):
+        newtype = evt.GetInt()
+        self.pva.wintype = newtype
+        self.pva2.wintype = newtype
+        self.output.wintype = newtype
+
+    def changeVol(self, evt):
+        self.gain.value = pow(10, evt.value * 0.05)
+
+    def processing(self):
+        self.gain = SigTo(1)
+        self.fade = Fader(fadein=1, mul=self.gain).play()
+        # Soundfile player 1
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = TableRead(self.soundtable, freq=1, loop=1, interp=4)
+        self.soundfilemono = self.soundfile.mix()
+        # Soundfile player 2
+        self.soundtable2 = SndTable(initchnls=2)
+        self.soundfile2 = TableRead(self.soundtable2, freq=1, loop=1, interp=4)
+        self.soundfilemono2 = self.soundfile2.mix()
+
+        self.pva = PVAnal(self.soundfilemono)
+        self.pva2 = PVAnal(self.soundfilemono2)
+        self.pvmult = PVMult(self.pva, self.pva2)
+        self.output = PVSynth(self.pvmult, mul=self.fade)
+        self.display = self.output
+
+class SpectralPlaybackModule(wx.Panel):
+    """
+    Module: 06-Vitesse et Hauteur Indépendantes
+    -------------------------------------------
+
+    Ce module permet d'expérimenter avec la resynthèse dans le 
+    domaine spectral.
+
+    Une analyse FFT (Vocodeur de phase) est d'abord effectuée sur
+    le signal et le résultat de chacune des analyses successives
+    est sauvegardé dans un tableau. La lecture du tableau permet
+    un contrôle indépendant de la vitesse de lecture et de la 
+    hauteur (transposition) du son.
+
+    Contrôles:
+        Fichier sonore:
+            permet de sélectionner le fichier son à resynthétiser.
+        Taille FFT:
+            Nombre de points dans l'analyse FFT. Le spectre entre
+            0 et la fréquence d'échantillonnage sera séparé en
+            autant de tranches. Le nombre de tranches effectives
+            est donc `taille FFT / 2`, c'est-à-dire les tranches
+            entre 0 et la fréquence de Nyquist.
+        Chevauchements:
+            Le nombre d'analyses qui se chevauchent sur la durée
+            correspondant à la taille FFT. Pour certain effets 
+            (en particulier la transposition et l'expansion 
+            temporelle), plus cette valeur est élevé, plus le rendu
+            sonore est de qualité. 
+        Fenêtre:
+            Le type de fenêtre appliqué avant et après l'analyse, afin
+            d'éliminer les artefacts dans le rendu sonore.
+        Enregistrer et jouer...:
+            Lance l'analyse du son et la lecture du tableau contenant
+            les analyses successives.
+        Vitesse de lecture:
+            Contrôle la vitesse de lecture, c'est-à-dire la vitesse
+            à laquelle les analyses successives sont lues.
+        Transposition:
+            Contrôle la transposition du spectre à la lecture.
+
+    """
+    name = "06-Vitesse et Hauteur Indépendantes"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        loadbutton = wx.Button(self, -1, "Fichier sonore")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        sizer.Add(loadbutton, 0, wx.ALL|wx.EXPAND, 5)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        # FFT properties widgets #
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizeBox = wx.BoxSizer(wx.VERTICAL)
+        sizelabel = wx.StaticText(self, -1, "Taille FFT")
+        sizeChoice = wx.Choice(self, -1, choices=SIZECHOICES)
+        sizeChoice.SetSelection(4)
+        sizeChoice.Bind(wx.EVT_CHOICE, self.changeSize)
+        sizeBox.AddMany([(sizelabel, 0, wx.EXPAND), (sizeChoice, 0, wx.EXPAND)])
+
+        overBox = wx.BoxSizer(wx.VERTICAL)
+        overlabel = wx.StaticText(self, -1, "Chevauchements")
+        overChoice = wx.Choice(self, -1, choices=OVERLAPS)
+        overChoice.SetSelection(1)
+        overChoice.Bind(wx.EVT_CHOICE, self.changeOver)
+        overBox.AddMany([(overlabel, 0, wx.EXPAND), (overChoice, 0, wx.EXPAND)])
+
+        typelabel = wx.StaticText(self, -1, "Fenêtre")
+        type = wx.Choice(self, -1, choices=WINCHOICES)
+        type.SetSelection(2)
+        type.Bind(wx.EVT_CHOICE, self.changeType)
+
+        box1.AddMany([(sizeBox, 1, wx.ALL, 1), (overBox, 1, wx.ALL, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 4)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        # FFT properties widgets #
+
+        sizer.AddSpacer(10)
+
+        self.buttonrec = wx.ToggleButton(self, -1, "Enregistrer et jouer...")
+        self.buttonrec.Bind(wx.EVT_TOGGLEBUTTON, self.record)
+        sizer.Add(self.buttonrec, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelspeed = wx.StaticText(self, -1, "Vitesse de lecture")
+        self.speed = PyoGuiControlSlider(self, -2, 2, 0.5)
+        self.speed.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.speed.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSpeed)
+
+        sizer.Add(labelspeed, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.speed, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelpitch = wx.StaticText(self, -1, "Transposition")
+        self.pitch = PyoGuiControlSlider(self, 0.1, 2, 1)
+        self.pitch.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.pitch.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePitch)
+
+        sizer.Add(labelpitch, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.pitch, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        sizer.AddSpacer(10)
+
+        self.waitinglabel = wx.StaticText(self, -1, "")
+        sizer.Add(self.waitinglabel, 0, wx.EXPAND|wx.LEFT|wx.TOP, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.freq = self.soundtable.getRate()
+
+        dlg.Destroy()
+
+    def changeSize(self, evt):
+        newsize = int(evt.GetString())
+        self.pva.size = newsize
+        self.recording()
+
+    def changeOver(self, evt):
+        newolaps = int(evt.GetString())
+        self.pva.overlaps = newolaps
+        self.recording()
+
+    def changeType(self, evt):
+        newtype = evt.GetInt()
+        self.pva.wintype = newtype
+        self.output.wintype = newtype
+
+    def record(self, evt):
+        if evt.GetInt():
+            self.recording()
+        else:
+            self.pvb.stop()
+            self.gain.stop()
+
+    def recording(self):
+        dur = self.soundtable.getDur()
+        self.pvb.length = dur
+        self.soundfile.play()
+        self.gain.play()
+        self.pvb.play()
+        self.waitinglabel.SetLabel("Mise en mémoire...")
+        wx.CallLater(dur*1000, self.waitinglabel.SetLabel, "")
+
+    def changeSpeed(self, evt):
+        self.rate.value = evt.value
+
+    def changePitch(self, evt):
+        self.pit.value = evt.value
+
+    def processing(self):
+        self.gain = Fader(0.05, 0.05, 0)
+
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = TableRead(self.soundtable, freq=1, loop=1, interp=4)
+
+        self.rate = SigTo(0.5)
+        self.index = Phasor(freq=1/5*self.rate)
+        self.pit = SigTo(1)
+
+        self.pva = PVAnal(self.soundfile)
+        self.pvb = PVBuffer(self.pva, self.index, self.pit, length=5).stop()
+        self.output = PVSynth(self.pvb, mul=self.gain)
+        self.display = self.output
+
+class SpectralDelayModule(wx.Panel):
+    """
+    Module: 06-Délai Spectral
+    --------------------------
+
+    Ce module permet d'expérimenter avec le délai par tranche de
+    fréquence dans le domaine spectral.
+
+    Une analyse FFT (Vocodeur de phase) est d'abord effectuée sur 
+    le signal puis chacune des tranches de fréquence peut être
+    délayée (avec facteur de récursion) indépendamment les unes
+    des autres.
+
+    Contrôles:
+        Choisir un son:
+            Permet de sélectionner un fichier sonore.
+        Jouer:
+            Lance la lecture du fichier son en boucle.
+        Taille FFT:
+            Nombre de points dans l'analyse FFT. Le spectre entre
+            0 et la fréquence d'échantillonnage sera séparé en
+            autant de tranches. Le nombre de tranches effectives
+            est donc `taille FFT / 2`, c'est-à-dire les tranches
+            entre 0 et la fréquence de Nyquist.
+        Chevauchements:
+            Le nombre d'analyses qui se chevauchent sur la durée
+            correspondant à la taille FFT. Pour certain effets 
+            (en particulier la transposition et l'expansion 
+            temporelle), plus cette valeur est élevé, plus le rendu
+            sonore est de qualité. 
+        Fenêtre:
+            Le type de fenêtre appliqué avant et après l'analyse, afin
+            d'éliminer les artefacts dans le rendu sonore.
+        Délai par tranche de fréquence:
+            Ce graphique à bande permet de contrôler le temps de délai
+            (en multiple de la taille FFT divisée par le nombre de 
+            chevauchements) indépendamment pour chacune des tranches de
+            fréquence.
+        Récursion par tranche de fréq.:
+            Ce graphique à bande permet de contrôler le facteur de récursion
+            indépendamment pour chacune des tranches de fréquence.
+
+    """
+    name = "06-Délai Spectral"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.maxDelay = 2.0
+        self.fftsize = 1024
+        self.overlaps = 4
+        self.frames = int(self.maxDelay * self.GetParent().GetParent().server.getSamplingRate() / (self.fftsize / self.overlaps))
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        loadbutton = wx.Button(self, -1, "Choisir un son")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        row1.Add(loadbutton, 1, wx.RIGHT, 5)
+
+        self.playbutton = wx.ToggleButton(self, -1, "Jouer")
+        self.playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
+        row1.Add(self.playbutton, 0)
+
+        sizer.Add(row1, 0, wx.ALL|wx.EXPAND, 5)
+
+        sizer.AddSpacer(10)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        # FFT properties widgets #
+        box1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizeBox = wx.BoxSizer(wx.VERTICAL)
+        sizelabel = wx.StaticText(self, -1, "Taille FFT")
+        sizeChoice = wx.Choice(self, -1, choices=SIZECHOICES)
+        sizeChoice.SetSelection(4)
+        sizeChoice.Bind(wx.EVT_CHOICE, self.changeSize)
+        sizeBox.AddMany([(sizelabel, 0, wx.EXPAND), (sizeChoice, 0, wx.EXPAND)])
+
+        overBox = wx.BoxSizer(wx.VERTICAL)
+        overlabel = wx.StaticText(self, -1, "Chevauchements")
+        overChoice = wx.Choice(self, -1, choices=OVERLAPS)
+        overChoice.SetSelection(1)
+        overChoice.Bind(wx.EVT_CHOICE, self.changeOver)
+        overBox.AddMany([(overlabel, 0, wx.EXPAND), (overChoice, 0, wx.EXPAND)])
+
+        typelabel = wx.StaticText(self, -1, "Fenêtre")
+        type = wx.Choice(self, -1, choices=WINCHOICES)
+        type.SetSelection(2)
+        type.Bind(wx.EVT_CHOICE, self.changeType)
+
+        box1.AddMany([(sizeBox, 1, wx.ALL, 1), (overBox, 1, wx.ALL, 1)])
+
+        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 4)
+
+        sizer.Add(typelabel, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(type, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+        # FFT properties widgets #
+
+        box2 = wx.BoxSizer(wx.VERTICAL)
+        delayLabel = wx.StaticText(self, -1, label="Délai par tranche de fréquence")
+        self.delay = DataMultiSlider(self, [0.0 for i in range(256)], yrange=(0, self.frames), size=(-1, 100), outFunction=self.changeDelay)
+        box2.AddMany([(delayLabel, 0), (self.delay, 0, wx.EXPAND)])
+
+        sizer.Add(box2, 0, wx.EXPAND | wx.ALL, 5)
+
+        box3 = wx.BoxSizer(wx.VERTICAL)
+        feedLabel = wx.StaticText(self, -1, label="Récursion par tranche de fréq.")
+        feed = DataMultiSlider(self, [0.0 for i in range(256)], size=(-1, 100), outFunction=self.changeFeed)
+        box3.AddMany([(feedLabel, 0), (feed, 0, wx.EXPAND)])
+
+        sizer.Add(box3, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+                self.soundfile.freq = self.soundtable.getRate()
+
+        dlg.Destroy()
+
+    def onPlaySoundfile(self, evt):
+        if evt.GetInt():
+            self.soundfile.play()
+        else:
+            self.soundfile.stop()
+
+    def changeSize(self, evt):
+        self.fftsize = int(evt.GetString())
+        self.pva.size = self.fftsize
+        self.frames = int(self.maxDelay * self.GetParent().GetParent().server.getSamplingRate() / (self.fftsize / self.overlaps))
+        self.delay.yrange = (0, self.frames)
+
+    def changeOver(self, evt):
+        self.overlaps = int(evt.GetString())
+        self.pva.overlaps = self.overlaps
+        self.frames = int(self.maxDelay * self.GetParent().GetParent().server.getSamplingRate() / (self.fftsize / self.overlaps))
+        self.delay.yrange = (0, self.frames)
+
+    def changeType(self, evt):
+        newtype = evt.GetInt()
+        self.pva.wintype = newtype
+        self.output.wintype = newtype
+
+    def changeDelay(self, values):
+        if hasattr(self, "deltable"):
+            self.deltable.replace(values)
+
+    def changeFeed(self, values):
+        if hasattr(self, "feedtable"):
+            self.feedtable.replace(values)
+
+    def processing(self):
+        self.soundtable = SndTable(initchnls=2)
+        self.soundfile = TableRead(self.soundtable, freq=1, loop=1, interp=4)
+
+        self.deltable = DataTable(256)
+        self.feedtable = DataTable(256)
+        self.pva = PVAnal(self.soundfile)
+        self.pvd = PVDelay(self.pva, self.deltable, self.feedtable, maxdelay=self.maxDelay, mode=1)
+        self.output = PVSynth(self.pvd)
+        self.display = self.output
+
 class AddSynthFixModule(wx.Panel):
     """
-    Module: 06-Sommation de sinusoïdes
+    Module: 08-Sommation de sinusoïdes
     ----------------------------------
 
     Ce module permet de construire graduellement des formes d'onde
@@ -1649,7 +2481,7 @@ class AddSynthFixModule(wx.Panel):
             Détermine de combien de composantes est constituée la forme
             d'onde. Plus le nombre est élevé, plus la forme est précise.
     """
-    name = "06-Sommation de sinusoïdes"
+    name = "08-Sommation de sinusoïdes"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1714,7 +2546,7 @@ class AddSynthFixModule(wx.Panel):
 
 class AddSynthVarModule(wx.Panel):
     """
-    Module: 06-Synthèse Additive
+    Module: 08-Synthèse Additive
     ----------------------------
 
     Ce module permet d'expérimenter avec certains algorithmes de réduction
@@ -1790,7 +2622,7 @@ class AddSynthVarModule(wx.Panel):
             de l'enveloppe.
 
     """
-    name = "06-Synthèse Additive"
+    name = "08-Synthèse Additive"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1960,7 +2792,7 @@ class AddSynthVarModule(wx.Panel):
 
 class PulseWidthModModule(wx.Panel):
     """
-    Module: 06-Modulation de largeur d'impulsion
+    Module: 08-Modulation de largeur d'impulsion
     --------------------------------------------
 
     Ce module génère un signal audio à l'aide de la technique dite
@@ -1993,7 +2825,7 @@ class PulseWidthModModule(wx.Panel):
             multiplié par 2.
 
     """
-    name = "06-Modulation de largeur d'impulsion"
+    name = "08-Modulation de largeur d'impulsion"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2042,7 +2874,7 @@ class PulseWidthModModule(wx.Panel):
 
 class OscSyncModule(wx.Panel):
     """
-    Module: 06-Oscillateur synchronisé
+    Module: 08-Oscillateur synchronisé
     ----------------------------------
 
     Ce module permet d'explorer le potentiel de l'oscillateur
@@ -2085,7 +2917,7 @@ class OscSyncModule(wx.Panel):
             d'harmoniques) du changement de phase instantanné.
 
     """
-    name = "06-Oscillateur synchronisé"
+    name = "08-Oscillateur synchronisé"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2154,7 +2986,7 @@ class OscSyncModule(wx.Panel):
 
 class AmpModModule(wx.Panel):
     """
-    Module: 07-Modulation de l'amplitude
+    Module: 09-Modulation de l'amplitude
     ------------------------------------
 
     Ce module permet de comparer la modulation en anneaux et la modulation
@@ -2191,7 +3023,7 @@ class AmpModModule(wx.Panel):
             signal final.
 
     """
-    name = "07-Modulation de l'amplitude"
+    name = "09-Modulation de l'amplitude"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2274,7 +3106,7 @@ class AmpModModule(wx.Panel):
 
 class FreqModModule(wx.Panel):
     """
-    Module: 07-Modulation de fréquence
+    Module: 09-Modulation de fréquence
     ----------------------------------
 
     Ce module permet d'explorer le potentiel de la modulation de fréquence
@@ -2310,7 +3142,7 @@ class FreqModModule(wx.Panel):
             signal final.
 
     """
-    name = "07-Modulation de fréquence"
+    name = "09-Modulation de fréquence"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2393,7 +3225,7 @@ class FreqModModule(wx.Panel):
 
 class AutoModModule(wx.Panel):
     """
-    Module: 07-Auto-modulation
+    Module: 09-Auto-modulation
     --------------------------
 
     Ce module illustre l'auto-modulation.
@@ -2420,7 +3252,7 @@ class AutoModModule(wx.Panel):
             fréquence de l'oscillateur.
 
     """
-    name = "07-Auto-modulation"
+    name = "09-Auto-modulation"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2460,7 +3292,7 @@ class AutoModModule(wx.Panel):
 
 class ChebyFuncModule(wx.Panel):
     """
-    Module: 08-Fonctions de Chebychev
+    Module: 10-Fonctions de Chebychev
     ---------------------------------
 
     Ce module permet de manipuler une fonction de transfert créée à l'aide
@@ -2484,7 +3316,7 @@ class ChebyFuncModule(wx.Panel):
             Active/désactive la fonction de normalisation.
 
     """
-    name = "08-Fonctions de Chebychev"
+    name = "10-Fonctions de Chebychev"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2601,7 +3433,7 @@ class ChebyFuncModule(wx.Panel):
 
 class DistoFuncModule(wx.Panel):
     """
-    Module: 08-Algorithmes de distorsion
+    Module: 10-Algorithmes de distorsion
     ------------------------------------
 
     Ce module permet de comparer quatre différents algorithmes de distorsion.
@@ -2632,7 +3464,7 @@ class DistoFuncModule(wx.Panel):
             Fréquence de coupure, en Hertz, du filtre passe-bas.
 
     """
-    name = "08-Algorithmes de distorsion"
+    name = "10-Algorithmes de distorsion"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2715,153 +3547,11 @@ class DistoFuncModule(wx.Panel):
         self.output = self.filtered
         self.display = self.output
 
-class VocoderModule(wx.Panel):
-    """
-    Module: 09-Vocodeur
-    -------------------
-
-    Ce module illustre le vocodeur dans le domaine temporel.
-
-    Contrôles:
-        Env. spectrale:
-            Permet de choisir le son qui servira d'enveloppe spectrale.
-        Excitation:
-            Permet de choisir le son qui servira d'excitation.
-        Jouer les sons:
-            Active la lecture des sons sources.
-
-    """
-    name = "09-Vocodeur"
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        head = HeadTitle(self, "Sources Sonores")
-        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
-
-        row1 = wx.BoxSizer(wx.HORIZONTAL)
-
-        loadbutton = wx.Button(self, -1, "Env. spectrale")
-        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
-        row1.Add(loadbutton, 1, wx.ALL|wx.EXPAND, 5)
-
-        loadbutton2 = wx.Button(self, -1, "Excitation")
-        loadbutton2.Bind(wx.EVT_BUTTON, self.onLoadSoundfile2)
-        row1.Add(loadbutton2, 1, wx.ALL|wx.EXPAND, 5)
-
-        sizer.Add(row1, 0, wx.EXPAND)
-
-        self.playbutton = wx.ToggleButton(self, -1, "Jouer les sons")
-        self.playbutton.Bind(wx.EVT_TOGGLEBUTTON, self.onPlaySoundfile)
-        sizer.Add(self.playbutton, 0, wx.ALL|wx.EXPAND, 5)
-
-        sizer.AddSpacer(10)
-
-        head = HeadTitle(self, "Interface du Module")
-        sizer.Add(head, 0, wx.EXPAND)
-
-        sizer.AddSpacer(10)
-
-        box1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.p1 = LabelKnob(self, " Freq", mini=40, maxi=250, init=100, outFunction=self.setFreq)
-        self.p2 = LabelKnob(self, " Exp.", mini=0.5, maxi=2, init=1.2, outFunction=self.setExp)
-        self.p3 = LabelKnob(self, "  Q ", mini=1, maxi=100, init=20, outFunction=self.setQ)
-        self.p4 = LabelKnob(self, "Pente", mini=0, maxi=1, init=0.5, outFunction=self.setSlope)
-        self.p5 = LabelKnob(self, " Nbrs", mini=2, maxi=64, init=24, integer=True, outFunction=self.setStages)
-        box1.AddMany([(self.p1, 1), (self.p2, 1), (self.p3, 1), (self.p4, 1), (self.p5, 1)])
-
-        sizer.Add(box1, 0, wx.EXPAND | wx.ALL, 0)
-
-        labeldb = wx.StaticText(self, -1, "Volume (dB)")
-        self.db = PyoGuiControlSlider(self, -60, 18, 0)
-        self.db.setBackgroundColour(USR_PANEL_BACK_COLOUR)
-        self.db.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeVol)
-
-        sizer.Add(labeldb, 0, wx.LEFT|wx.TOP, 5)
-        sizer.Add(self.db, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
-
-        self.SetSizer(sizer)
-
-    def onLoadSoundfile(self, evt):
-        dlg = wx.FileDialog(
-            self, message="Choisir le fichier d'enveloppe spectrale",
-            defaultDir=os.getcwd(),
-            defaultFile="",
-            style=wx.FD_OPEN | wx.FD_PREVIEW)
-
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            if sndinfo(path) is not None:
-                self.soundtable.setSound(path)
-                self.soundfile.freq = self.soundtable.getRate()
-
-        dlg.Destroy()
-
-    def onLoadSoundfile2(self, evt):
-        dlg = wx.FileDialog(
-            self, message="Choisir le fichier d'excitation",
-            defaultDir=os.getcwd(),
-            defaultFile="",
-            style=wx.FD_OPEN | wx.FD_PREVIEW)
-
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            if sndinfo(path) is not None:
-                self.soundtable2.setSound(path)
-                self.soundfile2.freq = self.soundtable2.getRate()
-
-        dlg.Destroy()
-
-    def onPlaySoundfile(self, evt):
-        if evt.GetInt():
-            self.soundfile.play()
-            self.soundfile2.play()
-        else:
-            self.soundfile.stop()
-            self.soundfile2.stop()
-
-    def setFreq(self, value):
-        self.freq.value = value
-
-    def setExp(self, value):
-        self.exp.value = value
-
-    def setQ(self, value):
-        self.q.value = value
-
-    def setSlope(self, value):
-        self.slope.value = value
-
-    def setStages(self, value):
-        self.output.stages = value
-
-    def changeVol(self, evt):
-        self.gain.value = pow(10, evt.value * 0.05)
-
-    def processing(self):
-        self.gain = SigTo(1, 0.05, mul=0.25)
-        self.fade = Fader(fadein=1, mul=self.gain).play()
-        self.freq = SigTo(100, 0.05)
-        self.exp = SigTo(1.2, 0.05)
-        self.q = SigTo(20, 0.05)
-        self.slope = SigTo(0.5, 0.05)
-
-        # Soundfile player 1
-        self.soundtable = SndTable(initchnls=2)
-        self.soundfile = TableRead(self.soundtable, freq=1, loop=1, interp=4)
-        self.soundfilemono = self.soundfile.mix()
-        # Soundfile player 2
-        self.soundtable2 = SndTable(initchnls=2)
-        self.soundfile2 = TableRead(self.soundtable2, freq=1, loop=1, interp=4)
-        self.soundfilemono2 = self.soundfile2.mix()
-
-        self.output = Vocoder(self.soundfilemono, self.soundfilemono2, freq=self.freq,
-                              spread=self.exp, q=self.q, slope=self.slope, mul=self.fade)
-        self.display = self.output
-
 MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            FixedDelayModule, VariableDelayModule, PhasingModule, TransposeModule,
            ReverbModule, PanningModule, BinauralModule, PeakRMSModule,
-           EnvFollowerModule, GateModule, CompressModule, AddSynthFixModule,
+           EnvFollowerModule, GateModule, CompressModule, VocoderModule,
+           SpectralFilterModule, CrossSynthModule, SpectralPlaybackModule,
+           SpectralDelayModule, AddSynthFixModule,
            AddSynthVarModule, PulseWidthModModule, OscSyncModule, AmpModModule,
-           FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule, VocoderModule]
+           FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule]

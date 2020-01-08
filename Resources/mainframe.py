@@ -9,7 +9,7 @@ from .widgets import DocFrame, Knob, ShowCapture
 from .images import DSPDemo_Icon_Small
 
 class MainFrame(wx.Frame):
-    def __init__(self, parent, title, pos=(50, 50), size=(1000, 700)):
+    def __init__(self, parent, title, pos=(50, 50), size=(1000, 725)):
         wx.Frame.__init__(self, parent, -1, title, pos, size)
 
         self.Bind(wx.EVT_CLOSE, self.onQuit)
