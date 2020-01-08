@@ -2939,12 +2939,12 @@ class OscSyncModule(wx.Panel):
         sizer.Add(wave, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
 
         labelfr = wx.StaticText(self, -1, "Fréquence maître en Hz")
-        self.fr = PyoGuiControlSlider(self, 40, 2000, 86, log=True)
+        self.fr = PyoGuiControlSlider(self, 40, 2000, 172, log=True)
         self.fr.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeFreq)
 
         labelfr2 = wx.StaticText(self, -1, "Fréquence esclave en Hz")
-        self.fr2 = PyoGuiControlSlider(self, 40, 2000, 90, log=True)
+        self.fr2 = PyoGuiControlSlider(self, 40, 2000, 200, log=True)
         self.fr2.setBackgroundColour(USR_PANEL_BACK_COLOUR)
         self.fr2.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSlave)
 
@@ -2978,8 +2978,8 @@ class OscSyncModule(wx.Panel):
         self.tables = [HarmTable(), SawTable(5), SawTable(15), SawTable(30), SawTable(60),
                       SquareTable(5), SquareTable(15), SquareTable(30), SquareTable(60),
                       TriTable(3), TriTable(6), TriTable(12), TriTable(24)]
-        self.freq = SigTo(86, 0.05)
-        self.slave = SigTo(90, 0.05)
+        self.freq = SigTo(172, 0.05)
+        self.slave = SigTo(200, 0.05)
         self.xfade = SigTo(0, 0.05)
         self.output = OscSync(self.tables[0], self.freq, self.slave, self.xfade)
         self.display = self.output

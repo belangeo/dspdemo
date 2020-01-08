@@ -665,7 +665,7 @@ class OscSync(PyoObject):
     >>> sosc = OscSync(table, master, slave, xfade=0.5, mul=0.3).out()
     
     """
-    def __init__(self, table, master=86, slave=90, xfade=0.5, mul=1, add=0):
+    def __init__(self, table, master=172, slave=200, xfade=0.5, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         # Raw arguments so that we can retrieve them with the attribute syntax.
         self._table = table
