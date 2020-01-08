@@ -272,8 +272,8 @@ class InputOnlyModule(wx.Panel):
 
 class ResamplingModule(wx.Panel):
     """
-    Module: 01-Échantillonnage
-    --------------------------
+    Module: 01-Échantillonnage - Fréquence d'échantillonnage
+    --------------------------------------------------------
 
     Ce module illustre l'effet de l'opération d'échantillonnage sur
     le spectre de fréquence d'un signal. Il est composé d'un choix
@@ -311,7 +311,7 @@ class ResamplingModule(wx.Panel):
             "FIR-128" : Fonction pieuvre à 128 points
 
     """
-    name = "01-Échantillonnage"
+    name = "01-Échantillonnage - Fréquence d'échantillonnage"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -380,8 +380,8 @@ class ResamplingModule(wx.Panel):
 
 class QuantizeModule(wx.Panel):
     """
-    Module: 01-Quantification
-    -------------------------
+    Module: 01-Échantillonnage - Quantification
+    --------------------------------------------
 
     Ce module illustre l'impact du nombre de bits de quantification
     utilisés lors de la numérisation d'un signal. En dessous de 8
@@ -402,7 +402,7 @@ class QuantizeModule(wx.Panel):
             sont offertes.
 
     """
-    name = "01-Quantification"
+    name = "01-Échantillonnage - Quantification"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -471,8 +471,8 @@ class QuantizeModule(wx.Panel):
 
 class FiltersModule(wx.Panel):
     """
-    Module: 01-Filtrage
-    -------------------
+    Module: 01-Filtrage - Comparaison des filtres
+    ---------------------------------------------
 
     Ce module permet de comparer l'effet des principaux filtres sur
     le signal audio. En plus du choix du filtre, des contrôles sont
@@ -503,7 +503,7 @@ class FiltersModule(wx.Panel):
             transition abruptes.
 
     """
-    name = "02-Filtrage"
+    name = "02-Filtrage - Comparaison des filtres"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -604,8 +604,8 @@ class FiltersModule(wx.Panel):
 
 class FixedDelayModule(wx.Panel):
     """
-    Module: 03-Délais-fixes
-    -----------------------
+    Module: 03-Délai - Délais fixes
+    -------------------------------
 
     Ce module permet de visualiser l'effet du temps de délai lorsqu'un
     signal original est additionné à une version délayé de lui-même. Les
@@ -632,7 +632,7 @@ class FixedDelayModule(wx.Panel):
             sont prononcés.
 
     """
-    name = "03-Délais-fixes"
+    name = "03-Délai - Délais fixes"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -687,8 +687,8 @@ class FixedDelayModule(wx.Panel):
 
 class VariableDelayModule(wx.Panel):
     """
-    Module: 03-Délais-variables
-    ---------------------------
+    Module: 03-Délai - Délais variables
+    -----------------------------------
 
     Ce module met en place une ligne de délai modulée à l'aide d'un
     oscillateur sinusoïdal. Les paramètres de fréquence du LFO,
@@ -725,7 +725,7 @@ class VariableDelayModule(wx.Panel):
             sont prononcés.
 
     """
-    name = "03-Délais-variables"
+    name = "03-Délai - Délais variables"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -795,8 +795,8 @@ class VariableDelayModule(wx.Panel):
 
 class PhasingModule(wx.Panel):
     """
-    Module: 03-Phasing
-    ------------------
+    Module: 03-Délai - Phasing
+    --------------------------
 
     Ce module permet d'explorer avec un effet de phasing construit à
     l'aide de 12 filtres passe-tout d'ordre second. La différence
@@ -824,7 +824,7 @@ class PhasingModule(wx.Panel):
             sont prononcés.
 
     """
-    name = "03-Phasing"
+    name = "03-Délai - Phasing"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -883,8 +883,8 @@ class PhasingModule(wx.Panel):
 
 class TransposeModule(wx.Panel):
     """
-    Module: 03-Transposition
-    ------------------------
+    Module: 03-Délai - Transposition
+    --------------------------------
 
     Ce module illustre le transposition dans le domaine temporel
     à l'aide de deux lignes de délai supperposées dont les temps
@@ -906,7 +906,7 @@ class TransposeModule(wx.Panel):
             des deux.
 
     """
-    name = "03-Transposition"
+    name = "03-Délai - Transposition"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -965,8 +965,8 @@ class TransposeModule(wx.Panel):
 
 class ReverbModule(wx.Panel):
     """
-    Module: 03-Réverbération
-    ------------------------
+    Module: 03-Délai - Réverbération
+    --------------------------------
 
     Ce module présente, à des fins de comparaison, divers algorithmes
     de réverbération numérique. Les choix sont:
@@ -1013,7 +1013,7 @@ class ReverbModule(wx.Panel):
             des deux.
 
     """
-    name = "03-Réverbération"
+    name = "03-Délai - Réverbération"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1102,8 +1102,8 @@ class ReverbModule(wx.Panel):
 
 class PanningModule(wx.Panel):
     """
-    Module: 04-Panoramisation
-    -------------------------
+    Module: 04-Spatialisation - Panoramisation
+    ------------------------------------------
 
     Ce module permet de comparer trois différents algorithmes de
     panoramisation.
@@ -1133,7 +1133,7 @@ class PanningModule(wx.Panel):
             0 = complètement à gauche, 1 = complètement à droite.
 
     """
-    name = "04-Panoramisation"
+    name = "04-Spatialisation - Panoramisation"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1183,8 +1183,8 @@ class PanningModule(wx.Panel):
 
 class BinauralModule(wx.Panel):
     """
-    Module: 04-Binaural Spatialisation 3D
-    -------------------------------------
+    Module: 04-Spatialisation - Spatialisation binaurale en 3D
+    ----------------------------------------------------------
 
     Ce module permet d'expérimenter avec la panoramisation 3D en
     stéréo à l'aide des algorithmes VBAP (Vector-Based Amplitude
@@ -1217,7 +1217,7 @@ class BinauralModule(wx.Panel):
             au dessus de la tête.
 
     """
-    name = "04-Binaural Spatialisation 3D"
+    name = "04-Spatialisation - Spatialisation binaurale en 3D"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1262,8 +1262,8 @@ class BinauralModule(wx.Panel):
 
 class PeakRMSModule(wx.Panel):
     """
-    Module: 05-Valeur crête vs RMS
-    ------------------------------
+    Module: 05-Dynamique - Valeur crête vs RMS
+    ------------------------------------------
 
     Ce module illustre la différence entre la valeur crête (peak)
     et la valeur efficace (RMS).
@@ -1272,7 +1272,7 @@ class PeakRMSModule(wx.Panel):
     crête et RMS en vert et bleu respectivement.
 
     """
-    name = "05-Valeur crête vs RMS"
+    name = "05-Dynamique - Valeur crête vs RMS"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1313,8 +1313,8 @@ class PeakRMSModule(wx.Panel):
 
 class EnvFollowerModule(wx.Panel):
     """
-    Module: 05-Suivi d'enveloppe
-    ----------------------------
+    Module: 05-Dynamique - Suivi d'amplitude
+    ----------------------------------------
 
     Ce module illustre le suivi d'enveloppe d'amplitude. La source
     est d'abord analysée puis son suivi d'amplitude est utilisé pour
@@ -1331,7 +1331,7 @@ class EnvFollowerModule(wx.Panel):
             et moins les petites variations d'amplitude seront perceptibles.
 
     """
-    name = "05-Suivi d'enveloppe"
+    name = "05-Dynamique - Suivi d'amplitude"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1367,8 +1367,8 @@ class EnvFollowerModule(wx.Panel):
 
 class GateModule(wx.Panel):
     """
-    Module: 05-Porte de bruit
-    -------------------------
+    Module: 05-Dynamique - Porte de bruit
+    -------------------------------------
 
     Ce module permet d'expérimenter avec la porte de bruit.
 
@@ -1389,7 +1389,7 @@ class GateModule(wx.Panel):
             0 lorsque le suivi d'amplitude passe en dessous du seuil.
 
     """
-    name = "05-Porte de bruit"
+    name = "05-Dynamique - Porte de bruit"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1446,8 +1446,8 @@ class GateModule(wx.Panel):
 
 class CompressModule(wx.Panel):
     """
-    Module: 05-Compresseur
-    -----------------------
+    Module: 05-Dynamique - Compresseur
+    ----------------------------------
 
     Ce module permet d'expérimenter avec le compresseur.
 
@@ -1476,7 +1476,7 @@ class CompressModule(wx.Panel):
             seuil.
 
     """
-    name = "05-Compresseur"
+    name = "05-Dynamique - Compresseur"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1556,8 +1556,8 @@ class CompressModule(wx.Panel):
 # Not used yet.
 class MBCompressModule(wx.Panel):
     """
-    Module: 05-Compresseur Multi-Bande
-    ----------------------------------
+    Module: 05-Dynamique - Compresseur Multi-Bande
+    ----------------------------------------------
 
     Ce module permet d'expérimenter avec la compression multi-bande.
 
@@ -1594,7 +1594,7 @@ class MBCompressModule(wx.Panel):
             seuil.
 
     """
-    name = "05-Compresseur Multi-Bande"
+    name = "05-Dynamique - Compresseur Multi-Bande"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1640,8 +1640,8 @@ class MBCompressModule(wx.Panel):
 
 class VocoderModule(wx.Panel):
     """
-    Module: 06-Vocodeur
-    -------------------
+    Module: 06-Domaine Spectral - Vocodeur
+    --------------------------------------
 
     Ce module illustre le vocodeur dans le domaine temporel.
 
@@ -1667,7 +1667,7 @@ class VocoderModule(wx.Panel):
             Nombre de filtres passe-bande constituant le vocodeur.
 
     """
-    name = "06-Vocodeur"
+    name = "06-Domaine Spectral - Vocodeur"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1797,8 +1797,8 @@ class VocoderModule(wx.Panel):
 
 class SpectralFilterModule(wx.Panel):
     """
-    Module: 06-Filtre Spectral
-    --------------------------
+    Module: 06-Domaine Spectral - Filtrage
+    --------------------------------------
 
     Ce module permet d'expérimenter avec le filtrage dans le 
     domaine spectral.
@@ -1828,7 +1828,7 @@ class SpectralFilterModule(wx.Panel):
             fréquence (0 à Nyquist pour une taille de 512).
 
     """
-    name = "06-Filtre Spectral"
+    name = "06-Domaine Spectral - Filtrage"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1907,8 +1907,8 @@ class SpectralFilterModule(wx.Panel):
 
 class CrossSynthModule(wx.Panel):
     """
-    Module: 06-Synthèse croisée
-    ---------------------------
+    Module: 06-Domaine Spectral - Synthèse croisée
+    ----------------------------------------------
 
     Ce module permet d'expérimenter avec la synthèse croisée dans
     le domaine spectral.
@@ -1947,7 +1947,7 @@ class CrossSynthModule(wx.Panel):
             Permet d'ajuster le volume après la synthèse croisée.
 
     """
-    name = "06-Synthèse croisée"
+    name = "06-Domaine Spectral - Synthèse croisée"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2093,8 +2093,8 @@ class CrossSynthModule(wx.Panel):
 
 class SpectralPlaybackModule(wx.Panel):
     """
-    Module: 06-Vitesse et Hauteur Indépendantes
-    -------------------------------------------
+    Module: 06-Domaine Spectral - Vitesse et Hauteur Indépendantes
+    --------------------------------------------------------------
 
     Ce module permet d'expérimenter avec la resynthèse dans le 
     domaine spectral.
@@ -2133,7 +2133,7 @@ class SpectralPlaybackModule(wx.Panel):
             Contrôle la transposition du spectre à la lecture.
 
     """
-    name = "06-Vitesse et Hauteur Indépendantes"
+    name = "06-Domaine Spectral - Vitesse et Hauteur Indépendantes"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2276,8 +2276,8 @@ class SpectralPlaybackModule(wx.Panel):
 
 class SpectralDelayModule(wx.Panel):
     """
-    Module: 06-Délai Spectral
-    --------------------------
+    Module: 06-Domaine Spectral - Délai Spectral
+    --------------------------------------------
 
     Ce module permet d'expérimenter avec le délai par tranche de
     fréquence dans le domaine spectral.
@@ -2317,7 +2317,7 @@ class SpectralDelayModule(wx.Panel):
             indépendamment pour chacune des tranches de fréquence.
 
     """
-    name = "06-Délai Spectral"
+    name = "06-Domaine Spectral - Délai Spectral"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2452,8 +2452,8 @@ class SpectralDelayModule(wx.Panel):
 
 class AddSynthFixModule(wx.Panel):
     """
-    Module: 08-Sommation de sinusoïdes
-    ----------------------------------
+    Module: 08-Synthèse Additive - Sommation de sinusoïdes
+    ------------------------------------------------------
 
     Ce module permet de construire graduellement des formes d'onde
     en dent de scie, carrée et triangulaire par sommation d'ondes
@@ -2481,7 +2481,7 @@ class AddSynthFixModule(wx.Panel):
             Détermine de combien de composantes est constituée la forme
             d'onde. Plus le nombre est élevé, plus la forme est précise.
     """
-    name = "08-Sommation de sinusoïdes"
+    name = "08-Synthèse Additive - Sommation de sinusoïdes"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2546,8 +2546,8 @@ class AddSynthFixModule(wx.Panel):
 
 class AddSynthVarModule(wx.Panel):
     """
-    Module: 08-Synthèse Additive
-    ----------------------------
+    Module: 08-Synthèse Additive - Synthèse Additive
+    ------------------------------------------------
 
     Ce module permet d'expérimenter avec certains algorithmes de réduction
     de données dans un contexte de synthèse additive à forme d'onde variable.
@@ -2622,7 +2622,7 @@ class AddSynthVarModule(wx.Panel):
             de l'enveloppe.
 
     """
-    name = "08-Synthèse Additive"
+    name = "08-Synthèse Additive - Synthèse Additive"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2792,8 +2792,8 @@ class AddSynthVarModule(wx.Panel):
 
 class PulseWidthModModule(wx.Panel):
     """
-    Module: 08-Modulation de largeur d'impulsion
-    --------------------------------------------
+    Module: 08-Oscillateurs - Modulation de largeur d'impulsion
+    -----------------------------------------------------------
 
     Ce module génère un signal audio à l'aide de la technique dite
     de modulation à largeur d'impulsion.
@@ -2825,7 +2825,7 @@ class PulseWidthModModule(wx.Panel):
             multiplié par 2.
 
     """
-    name = "08-Modulation de largeur d'impulsion"
+    name = "08-Oscillateurs - Modulation de largeur d'impulsion"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2874,8 +2874,8 @@ class PulseWidthModModule(wx.Panel):
 
 class OscSyncModule(wx.Panel):
     """
-    Module: 08-Oscillateur synchronisé
-    ----------------------------------
+    Module: 08-Oscillateurs - Oscillateur synchronisé
+    -------------------------------------------------
 
     Ce module permet d'explorer le potentiel de l'oscillateur
     synchronisé.
@@ -2917,7 +2917,7 @@ class OscSyncModule(wx.Panel):
             d'harmoniques) du changement de phase instantanné.
 
     """
-    name = "08-Oscillateur synchronisé"
+    name = "08-Oscillateurs - Oscillateur synchronisé"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2986,8 +2986,8 @@ class OscSyncModule(wx.Panel):
 
 class AmpModModule(wx.Panel):
     """
-    Module: 09-Modulation de l'amplitude
-    ------------------------------------
+    Module: 09-Modulation - Modulation de l'amplitude
+    -------------------------------------------------
 
     Ce module permet de comparer la modulation en anneaux et la modulation
     d'amplitude.
@@ -3023,7 +3023,7 @@ class AmpModModule(wx.Panel):
             signal final.
 
     """
-    name = "09-Modulation de l'amplitude"
+    name = "09-Modulation - Modulation de l'amplitude"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -3106,8 +3106,8 @@ class AmpModModule(wx.Panel):
 
 class FreqModModule(wx.Panel):
     """
-    Module: 09-Modulation de fréquence
-    ----------------------------------
+    Module: 09-Modulation - Modulation de fréquence
+    -----------------------------------------------
 
     Ce module permet d'explorer le potentiel de la modulation de fréquence
     selon l'algorithme de John Chaowning.
@@ -3142,7 +3142,7 @@ class FreqModModule(wx.Panel):
             signal final.
 
     """
-    name = "09-Modulation de fréquence"
+    name = "09-Modulation - Modulation de fréquence"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -3225,8 +3225,8 @@ class FreqModModule(wx.Panel):
 
 class AutoModModule(wx.Panel):
     """
-    Module: 09-Auto-modulation
-    --------------------------
+    Module: 09-Modulation - Auto-modulation
+    ----------------------------------------
 
     Ce module illustre l'auto-modulation.
 
@@ -3252,7 +3252,7 @@ class AutoModModule(wx.Panel):
             fréquence de l'oscillateur.
 
     """
-    name = "09-Auto-modulation"
+    name = "09-Modulation - Auto-modulation"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -3292,8 +3292,8 @@ class AutoModModule(wx.Panel):
 
 class ChebyFuncModule(wx.Panel):
     """
-    Module: 10-Fonctions de Chebychev
-    ---------------------------------
+    Module: 10-Distorsion - Fonctions de Chebychev
+    ----------------------------------------------
 
     Ce module permet de manipuler une fonction de transfert créée à l'aide
     des 10 premiers polynômes de Chebychev.
@@ -3316,7 +3316,7 @@ class ChebyFuncModule(wx.Panel):
             Active/désactive la fonction de normalisation.
 
     """
-    name = "10-Fonctions de Chebychev"
+    name = "10-Distorsion - Fonctions de Chebychev"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -3433,8 +3433,8 @@ class ChebyFuncModule(wx.Panel):
 
 class DistoFuncModule(wx.Panel):
     """
-    Module: 10-Algorithmes de distorsion
-    ------------------------------------
+    Module: 10-Distorsion - Algorithmes de distorsion
+    -------------------------------------------------
 
     Ce module permet de comparer quatre différents algorithmes de distorsion.
 
@@ -3464,7 +3464,7 @@ class DistoFuncModule(wx.Panel):
             Fréquence de coupure, en Hertz, du filtre passe-bas.
 
     """
-    name = "10-Algorithmes de distorsion"
+    name = "10-Distorsion - Algorithmes de distorsion"
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
