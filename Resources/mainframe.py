@@ -160,7 +160,7 @@ class MainFrame(wx.Frame):
         info.SetVersion(APP_VERSION)
         if sys.platform != "darwin":
             info.SetIcon(DSPDemo_Icon_Small.GetIcon())
-        info.SetCopyright("(C) 2018 Olivier Bélanger")
+        info.SetCopyright("(C) %s" % APP_COPYRIGHT)
         info.SetDescription("\nDSPDemo est une application conçue pour analyser "
                             "et visualiser différents processus audio.\n")
         AboutBox(info, self)

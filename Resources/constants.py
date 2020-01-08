@@ -1,8 +1,8 @@
 import os, sys
 
 APP_NAME = 'DSPDemo'
-APP_VERSION = '0.1.0'
-APP_COPYRIGHT = 'Olivier Bélanger, 2018'
+APP_VERSION = '0.2.0'
+APP_COPYRIGHT = 'Olivier Bélanger, 2020'
 
 if '/%s.app' % APP_NAME in os.getcwd():
     RESOURCES_PATH = os.getcwd()
