@@ -14,7 +14,7 @@ DefaultDirName={pf}\DSPDemo
 DisableDirPage=yes
 DefaultGroupName=DSPDemo
 AllowNoIcons=yes
-LicenseFile=C:\Users\olivier\git\dspdemo\DSPDemo_Win\Resources\COPYING.txt
+LicenseFile=C:\Users\Admin\git\dspdemo\DSPDemo_Win\Resources\COPYING.txt
 OutputBaseFilename=DSPDemo_0.2.0_setup
 Compression=lzma
 SolidCompression=yes
@@ -28,8 +28,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\olivier\git\dspdemo\DSPDemo_Win\DSPDemo.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\olivier\git\dspdemo\DSPDemo_Win\Resources\*"; DestDir: "{app}\Resources"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\Admin\git\dspdemo\DSPDemo_Win\DSPDemo.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Admin\git\dspdemo\DSPDemo_Win\Resources\*"; DestDir: "{app}\Resources"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
