@@ -2450,6 +2450,270 @@ class SpectralDelayModule(wx.Panel):
         self.output = PVSynth(self.pvd)
         self.display = self.output
 
+class GranulationPlaybackModule(wx.Panel):
+    """
+    Module: 07-Granulation - Vitesse et Hauteur Indépendantes
+    ---------------------------------------------------------
+
+    Ce module permet d'expérimenter avec les variations de lecture
+    du son par le procédé de granulation.
+
+    Le point de départ des grains dans un fichier son, qui est complètement
+    indépendant de la vitesse à laquelle le son est lu à l'intérieur du
+    grain, permet d'étirer ou de compresser la durée d'un son sans en 
+    affecter la hauteur. La vitesse à laquelle chacun des grains est lu
+    permet de contrôler la transposition (sans affecter la durée de lecture).
+
+    Contrôles:
+        Fichier sonore:
+            permet de sélectionner le fichier son à lire.
+        Démarrer la lecture:
+            Lance la lecture du son par le procédé de granulation.
+        Vitesse de lecture:
+            Contrôle la vitesse de lecture, c'est-à-dire la vitesse
+            à laquelle le pointeur de départ des grains se déplace
+            dans le fichier son.
+        Transposition:
+            Contrôle la transposition des grains à la lecture.
+
+    """
+    name = "07-Granulation - Vitesse et Hauteur Indépendantes"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        loadbutton = wx.Button(self, -1, "Fichier sonore")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        sizer.Add(loadbutton, 0, wx.ALL|wx.EXPAND, 5)
+
+        sizer.AddSpacer(5)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        sizer.AddSpacer(10)
+
+        self.buttonplay = wx.ToggleButton(self, -1, "Démarrer la lecture")
+        self.buttonplay.Bind(wx.EVT_TOGGLEBUTTON, self.startPlayback)
+        sizer.Add(self.buttonplay, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelspeed = wx.StaticText(self, -1, "Vitesse de lecture")
+        self.speed = PyoGuiControlSlider(self, -2, 2, 0.5)
+        self.speed.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.speed.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeSpeed)
+
+        sizer.Add(labelspeed, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.speed, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelpitch = wx.StaticText(self, -1, "Transposition")
+        self.pitch = PyoGuiControlSlider(self, 0.1, 2, 1)
+        self.pitch.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.pitch.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changePitch)
+
+        sizer.Add(labelpitch, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.pitch, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        sizer.AddSpacer(20)
+
+        message = wx.StaticText(self, -1, "Une vitesse de 0 produira")
+        sizer.Add(message, 0, wx.EXPAND|wx.LEFT|wx.TOP, 5)
+        message2 = wx.StaticText(self, -1, "un gel du son!")
+        sizer.Add(message2, 0, wx.EXPAND|wx.LEFT|wx.TOP, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+
+        dlg.Destroy()
+
+    def startPlayback(self, evt):
+        if evt.GetInt():
+            self.basedur.value = self.soundtable.getDur()
+            self.index.mul = self.soundtable.getSize()
+            self.index.reset()
+            self.output.play()
+        else:
+            self.output.stop()
+
+    def changeSpeed(self, evt):
+        self.rate.value = evt.value
+
+    def changePitch(self, evt):
+        self.pit.value = evt.value
+
+    def processing(self):
+        self.soundtable = SndTable(initchnls=2)
+
+        self.basedur = Sig(1)
+        self.rate = SigTo(0.5)
+        self.index = Phasor(1./self.basedur*self.rate, add=Noise(50))
+        self.pit = SigTo(1, mul=Noise(0.002, 1))
+
+        self.output = Particle(self.soundtable, HannTable(), dens=128, pitch=self.pit, 
+                               pos=self.index, dur=0.2, dev=0.01, mul=0.2).stop()
+        self.display = self.output
+
+class GranulationReorganizeModule(wx.Panel):
+    """
+    Module: 07-Granulation - Réorganisation temporelle
+    --------------------------------------------------
+
+    Ce module permet d'expérimenter avec les variations sur la position
+    de lecture du son par le procédé de granulation.
+
+    Ce module permet de contrôler deux techniques de réorganisation
+    temporelle du son par granulation.
+
+    1) En imposant des sauts au pointeur sur la position de départ 
+    des grains.
+
+    2) En ajoutant un déplacement aléatoire sur la position de départ 
+    des grains.
+
+    Contrôles:
+        Fichier sonore:
+            permet de sélectionner le fichier son à lire.
+        Démarrer la lecture:
+            Lance la lecture du son par le procédé de granulation.
+        Ambitus des sauts:
+            Contrôle sur la distance des sauts imposés au pointeur
+            de lecture.
+        Vitesse des sauts (Hz):
+            Vitesse de génération des sauts, en Hertz.
+        Ambitus variations aléatoires:
+            Contrôle sur l'écart maximum des variations aléatoires
+            imposés au pointeur de lecture.
+        Vitesse des variations (Hz):
+            Vitesse de génération des déplacements aléatoires, en Hertz.
+
+    """
+    name = "07-Granulation - Réorganisation temporelle"
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        head = HeadTitle(self, "Source Sonore")
+        sizer.Add(head, 0, wx.BOTTOM|wx.EXPAND, 5)
+
+        loadbutton = wx.Button(self, -1, "Fichier sonore")
+        loadbutton.Bind(wx.EVT_BUTTON, self.onLoadSoundfile)
+        sizer.Add(loadbutton, 0, wx.ALL|wx.EXPAND, 5)
+
+        sizer.AddSpacer(5)
+
+        head = HeadTitle(self, "Interface du Module")
+        sizer.Add(head, 0, wx.EXPAND)
+
+        sizer.AddSpacer(10)
+
+        self.buttonplay = wx.ToggleButton(self, -1, "Démarrer la lecture")
+        self.buttonplay.Bind(wx.EVT_TOGGLEBUTTON, self.startPlayback)
+        sizer.Add(self.buttonplay, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labeljump = wx.StaticText(self, -1, "Ambitus des sauts")
+        self.jump = PyoGuiControlSlider(self, 0, 1, 0)
+        self.jump.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.jump.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeJump)
+
+        sizer.Add(labeljump, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.jump, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labeljumpspeed = wx.StaticText(self, -1, "Vitesse des sauts (Hz)")
+        self.jumpspeed = PyoGuiControlSlider(self, 1, 20, 8)
+        self.jumpspeed.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.jumpspeed.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeJumpSpeed)
+
+        sizer.Add(labeljumpspeed, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.jumpspeed, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelrand = wx.StaticText(self, -1, "Ambitus variations aléatoires")
+        self.rand = PyoGuiControlSlider(self, 0, 1, 0)
+        self.rand.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.rand.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRand)
+
+        sizer.Add(labelrand, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.rand, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        labelrandspeed = wx.StaticText(self, -1, "Vitesse des variations (Hz)")
+        self.randspeed = PyoGuiControlSlider(self, 1, 20, 8)
+        self.randspeed.setBackgroundColour(USR_PANEL_BACK_COLOUR)
+        self.randspeed.Bind(EVT_PYO_GUI_CONTROL_SLIDER, self.changeRandSpeed)
+
+        sizer.Add(labelrandspeed, 0, wx.LEFT|wx.TOP, 5)
+        sizer.Add(self.randspeed, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 5)
+
+        self.SetSizer(sizer)
+
+    def onLoadSoundfile(self, evt):
+        dlg = wx.FileDialog(
+            self, message="Choisir le fichier d'enveloppe spectrale",
+            defaultDir=os.getcwd(),
+            defaultFile="",
+            style=wx.FD_OPEN | wx.FD_PREVIEW)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if sndinfo(path) is not None:
+                self.soundtable.setSound(path)
+
+        dlg.Destroy()
+
+    def startPlayback(self, evt):
+        if evt.GetInt():
+            self.basedur.value = self.soundtable.getDur()
+            self.index.mul = self.soundtable.getSize(False)
+            self.jumper.mul = self.soundtable.getSize(False) / 10.
+            self.index2.max = self.soundtable.getSize(False)
+            self.random.mul = self.soundtable.getSize(False)
+            self.index.reset()
+            self.jumper2.reset()
+            self.output.play()
+        else:
+            self.output.stop()
+
+    def changeJump(self, evt):
+        self.jumper.value = evt.value
+
+    def changeJumpSpeed(self, evt):
+        self.met.time = 1. / evt.value
+
+    def changeRand(self, evt):
+        self.random.value = evt.value
+
+    def changeRandSpeed(self, evt):
+        self.random.freq = 1. / evt.value
+
+    def processing(self):
+        self.soundtable = SndTable(initchnls=2)
+
+        self.random = Sig(0)
+        self.randomiser = Randh(0, self.random, freq=8)
+        self.basedur = Sig(1)
+        self.met = Metro(.125).play()
+        self.jumper = Sig(0)
+        self.jumper2 = Counter(self.met, min=0, max=10, mul=self.jumper, add=Noise(50))
+        self.index = Phasor(1./self.basedur, add=self.jumper2)
+        self.index2 = Wrap(self.index+self.randomiser)
+
+        self.output = Particle(self.soundtable, HannTable(), dens=128, pitch=Noise(0.002, 1), 
+                               pos=self.index2, dur=0.2, dev=0.01, mul=0.2).stop()
+        self.display = self.output
+
+# TODO: il manque un module pour illustrer les variations de parametre independantes par grain.
+
 class AddSynthFixModule(wx.Panel):
     """
     Module: 08-Synthèse Additive - Sommation de sinusoïdes
@@ -3552,6 +3816,7 @@ MODULES = [InputOnlyModule, ResamplingModule, QuantizeModule, FiltersModule,
            ReverbModule, PanningModule, BinauralModule, PeakRMSModule,
            EnvFollowerModule, GateModule, CompressModule, VocoderModule,
            SpectralFilterModule, CrossSynthModule, SpectralPlaybackModule,
-           SpectralDelayModule, AddSynthFixModule,
+           SpectralDelayModule, GranulationPlaybackModule, GranulationReorganizeModule, 
+           AddSynthFixModule,
            AddSynthVarModule, PulseWidthModModule, OscSyncModule, AmpModModule,
            FreqModModule, AutoModModule, ChebyFuncModule, DistoFuncModule]
